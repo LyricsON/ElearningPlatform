@@ -1,0 +1,33 @@
+@if (PageCount > 1)
+{
+    <div class="pagination">
+        <button @onclick="Previous" disabled="@IsFirst">Prev</button>
+        @for (var pageNumber = 1; pageNumber <= PageCount; pageNumber++)
+        {
+            <button class="@(pageNumber == CurrentPage ? "active" : string.Empty)" @onclick="() => ChangePage(pageNumber)">
+                @pageNumber
+            </button>
+        }
+        <button @onclick="Next" disabled="@IsLast">Next</button>
+    </div>
+}
+
+@code {
+    [Parameter] public int CurrentPage { get; set; }
+    [Parameter] public int PageCount { get; set; }
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+
+    private bool IsFirst => CurrentPage <= 1;
+    private bool IsLast => CurrentPage >= PageCount;
+
+    private async Task ChangePage(int page)
+    {
+        if (page == CurrentPage)
+            return;
+
+        await OnPageChanged.InvokeAsync(page);
+    }
+
+    private Task Previous() => ChangePage(Math.Max(1, CurrentPage - 1));
+    private Task Next() => ChangePage(Math.Min(PageCount, CurrentPage + 1));
+}

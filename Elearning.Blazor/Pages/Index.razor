@@ -1,0 +1,173 @@
+@page "/"
+
+@using System.Security.Claims
+@inject ICoursesApiClient CoursesApi
+@inject ICategoriesApiClient CategoriesApi
+@inject IEnrollmentsApiClient EnrollmentsApi
+@inject IQuizzesApiClient QuizzesApi
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="hero">
+    <div class="hero-content">
+        <p class="badge soft">Nouveau</p>
+        <h1>Apprenez n'importe où, n'importe quand</h1>
+        <p class="muted">Découvrez des centaines de cours en ligne pour développer vos compétences et propulser votre carrière.</p>
+        <div class="hero-actions">
+            <input class="input-control" placeholder="Rechercher un cours…" @bind="searchTerm" @bind:event="oninput" />
+            <button class="btn btn-primary" @onclick="SearchCourses"><i class="bi bi-search"></i> Rechercher</button>
+        </div>
+    </div>
+    <div class="hero-visual">
+        <div class="hero-card">
+            <i class="bi bi-ui-checks-grid"></i>
+            <p>Accès à des quizzes interactifs et cours structurés.</p>
+        </div>
+        <div class="hero-card">
+            <i class="bi bi-people-fill"></i>
+            <p>Rejoignez une communauté d'apprenants motivés.</p>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h3>Catégories populaires</h3>
+    <div class="pill-row">
+        @if (!categories.Any())
+        {
+            <span class="muted">Aucune catégorie pour le moment.</span>
+        }
+        else
+        {
+            @foreach (var category in categories.Take(8))
+            {
+                <button class="chip" @onclick="@(() => Navigation.NavigateTo($"/courses?categoryId={category.Id}"))">
+                    <i class="bi bi-folder"></i> @category.Name
+                </button>
+            }
+        }
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <h3>Cours les mieux notés</h3>
+        <a class="btn btn-outline" href="/courses">Voir tous les cours</a>
+    </div>
+    @if (topCourses.Any())
+    {
+        <div class="course-grid">
+            @foreach (var course in topCourses)
+            {
+                <CourseCard Course="course" PrimaryText="Voir le cours" OnPrimaryAction="@HandleViewCourse" />
+            }
+        </div>
+    }
+    else
+    {
+        <p class="muted">Pas de cours pour le moment.</p>
+    }
+</div>
+
+@if (isAuthenticated)
+{
+    <div class="section">
+        <div class="section-header">
+            <h3>Continuer à apprendre</h3>
+        </div>
+        @if (!enrolledCourses.Any())
+        {
+            <p class="muted">Vous n'êtes inscrit à aucun cours. <a href="/courses">Parcourir les cours</a>.</p>
+        }
+        else
+        {
+            <div class="course-grid">
+                @foreach (var item in enrolledCourses)
+                {
+                    <CourseCard Course="item.Course"
+                                IsEnrolled="true"
+                                ProgressPercent="item.Progress"
+                                PrimaryText="Continuer"
+                                OnPrimaryAction="@HandleViewCourse" />
+                }
+            </div>
+        }
+    </div>
+}
+
+<div class="section">
+    <div class="stat-grid">
+        <StatCard Icon="bi bi-mortarboard-fill" Label="Cours" Value="@totalCourses.ToString()" />
+        <StatCard Icon="bi bi-ui-checks-grid" Label="Quizzes" Value="@totalQuizzes.ToString()" />
+        <StatCard Icon="bi bi-people-fill" Label="Apprenants actifs" Value="@totalStudents.ToString()" />
+    </div>
+</div>
+
+@code {
+    private string searchTerm = string.Empty;
+    private List<CourseDto> topCourses = new();
+    private List<CourseCategoryDto> categories = new();
+    private int totalCourses;
+    private int totalQuizzes;
+    private int totalStudents;
+    private bool isAuthenticated;
+    private List<EnrolledCourseItem> enrolledCourses = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+
+        var coursesTask = CoursesApi.GetCoursesAsync();
+        var categoriesTask = CategoriesApi.GetCategoriesAsync();
+        var quizzesTask = QuizzesApi.GetQuizzesAsync();
+
+        await Task.WhenAll(coursesTask, categoriesTask, quizzesTask);
+
+        var courses = coursesTask.Result ?? new List<CourseDto>();
+        categories = categoriesTask.Result ?? new List<CourseCategoryDto>();
+        var quizzes = quizzesTask.Result ?? new List<QuizDto>();
+
+        totalCourses = courses.Count;
+        totalQuizzes = quizzes.Count;
+        totalStudents = 1200; // placeholder until backend provides stats
+
+        topCourses = courses.Take(6).ToList();
+
+        if (isAuthenticated)
+        {
+            var userId = int.TryParse(authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : (int?)null;
+            if (userId.HasValue)
+            {
+                var enrollments = await EnrollmentsApi.GetEnrollmentsAsync(userId, null);
+                enrolledCourses = enrollments
+                    .Select(e => new EnrolledCourseItem
+                    {
+                        Course = courses.FirstOrDefault(c => c.Id == e.CourseId) ?? new CourseDto { Id = e.CourseId, Title = $"Cours #{e.CourseId}" },
+                        Progress = e.ProgressPercent
+                    }).ToList();
+            }
+        }
+    }
+
+    private void SearchCourses()
+    {
+        Navigation.NavigateTo($"/courses?search={Uri.EscapeDataString(searchTerm ?? string.Empty)}");
+    }
+
+    private void HandleViewCourse(int courseId)
+    {
+        Navigation.NavigateTo($"/courses/{courseId}");
+    }
+
+    private class EnrolledCourseItem
+    {
+        public CourseDto Course { get; set; } = new();
+        public int Progress { get; set; }
+    }
+}

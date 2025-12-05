@@ -1,0 +1,126 @@
+@page "/courses"
+
+@using Microsoft.AspNetCore.WebUtilities
+@inject ICoursesApiClient CoursesApi
+@inject ICategoriesApiClient CategoriesApi
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <div>
+        <p class="muted">Browse catalog</p>
+        <h2>Courses</h2>
+    </div>
+</div>
+
+<div class="card">
+    <div class="filter-row">
+        <select class="input-control" @bind="selectedCategoryId">
+            <option value="">Toutes les catégories</option>
+            @foreach (var category in categories)
+            {
+                <option value="@category.Id">@category.Name</option>
+            }
+        </select>
+        <input class="input-control" placeholder="Rechercher un cours..." @bind="searchTerm" @bind:event="oninput" />
+        <select class="input-control" @bind="sortOption">
+            <option value="recent">Plus récent</option>
+            <option value="title">Titre (A-Z)</option>
+        </select>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading"><span class="spinner"></span> Chargement des cours...</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert">@errorMessage</div>
+    }
+    else if (!FilteredCourses.Any())
+    {
+        <p class="muted">Aucun cours ne correspond à vos filtres.</p>
+    }
+    else
+    {
+        <div class="course-grid">
+            @foreach (var course in FilteredCourses)
+            {
+                <CourseCard Course="course"
+                            PrimaryText="Voir le cours"
+                            OnPrimaryAction="@HandleViewCourse" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<CourseDto> courses = new();
+    private List<CourseCategoryDto> categories = new();
+    private string searchTerm = string.Empty;
+    private string selectedCategoryId = string.Empty;
+    private string sortOption = "recent";
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private IEnumerable<CourseDto> FilteredCourses
+    {
+        get
+        {
+            var query = courses
+                .Where(c => !SelectedCategory.HasValue || c.CategoryId == SelectedCategory.Value)
+                .Where(c => string.IsNullOrWhiteSpace(searchTerm) ||
+                            c.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+            query = sortOption == "title"
+                ? query.OrderBy(c => c.Title)
+                : query.OrderByDescending(c => c.CreatedAt);
+
+            return query;
+        }
+    }
+
+    private int? SelectedCategory => int.TryParse(selectedCategoryId, out var id) ? id : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ReadQueryParameters();
+        await LoadDataAsync();
+    }
+
+    private void ReadQueryParameters()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        searchTerm = query.TryGetValue("search", out var q) ? q.ToString() : string.Empty;
+        selectedCategoryId = query.TryGetValue("categoryId", out var cat) ? cat.ToString() : string.Empty;
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var courseTask = CoursesApi.GetCoursesAsync();
+            var categoryTask = CategoriesApi.GetCategoriesAsync();
+            await Task.WhenAll(courseTask, categoryTask);
+
+            courses = courseTask.Result ?? new List<CourseDto>();
+            categories = categoryTask.Result ?? new List<CourseCategoryDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load courses: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void HandleViewCourse(int courseId)
+    {
+        Navigation.NavigateTo($"/courses/{courseId}");
+    }
+}

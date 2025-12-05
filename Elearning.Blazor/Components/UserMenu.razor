@@ -1,0 +1,55 @@
+@using System.Security.Claims
+@inject NavigationManager Navigation
+
+<div class="user-menu" @onclick="ToggleDropdown">
+    <div class="avatar-chip">
+        <span class="avatar-circle">@Initials</span>
+        <div class="avatar-name">@DisplayName</div>
+        <i class="bi bi-chevron-down"></i>
+    </div>
+
+    @if (isOpen)
+    {
+        <div class="user-dropdown" @onclick:stopPropagation="true">
+            <button @onclick="@(() => NavigateTo("/profile"))"><i class="bi bi-person-circle"></i> Mon profil</button>
+            <button @onclick="@(() => NavigateTo("/my-courses"))"><i class="bi bi-journal-text"></i> Mes cours</button>
+            <button @onclick="@(() => NavigateTo("/my-results"))"><i class="bi bi-bar-chart"></i> Mes résultats</button>
+            <div class="dropdown-divider"></div>
+            <button class="danger" @onclick="OnLogout"><i class="bi bi-box-arrow-right"></i> Déconnexion</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CurrentUserDto User { get; set; } = new();
+    [Parameter] public EventCallback OnLogoutRequested { get; set; }
+
+    private bool isOpen;
+
+    private string Initials
+    {
+        get
+        {
+            var first = string.IsNullOrWhiteSpace(User.FirstName) ? User.Email : User.FirstName;
+            var second = User.LastName;
+            var combined = $"{first.FirstOrDefault()}{second.FirstOrDefault()}".Trim();
+            return string.IsNullOrWhiteSpace(combined) ? "U" : combined.ToUpperInvariant();
+        }
+    }
+
+    private string DisplayName => string.IsNullOrWhiteSpace(User.FirstName) ? User.Email : User.FirstName;
+
+    private void ToggleDropdown() => isOpen = !isOpen;
+
+    private void NavigateTo(string path)
+    {
+        isOpen = false;
+        Navigation.NavigateTo(path);
+    }
+
+    private async Task OnLogout()
+    {
+        isOpen = false;
+        await OnLogoutRequested.InvokeAsync();
+    }
+}

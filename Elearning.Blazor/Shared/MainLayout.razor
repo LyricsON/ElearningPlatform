@@ -1,0 +1,146 @@
+@inherits LayoutComponentBase
+@using System.Security.Claims
+@inject NavigationManager Navigation
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>E-Learning Platform</PageTitle>
+
+<header class="top-header">
+    <div class="brand" @onclick="GoHome">
+        <i class="bi bi-mortarboard-fill"></i>
+        <span class="brand-title">E-Learning</span>
+    </div>
+
+    <div class="search-bar">
+        <input class="input-control" placeholder="Rechercher un cours…" @bind="searchTerm" @bind:event="oninput" />
+        <button class="btn btn-outline" @onclick="OnSearch"><i class="bi bi-search"></i></button>
+    </div>
+
+    <div class="header-actions">
+        @if (!isAuthenticated)
+        {
+            <a class="btn btn-outline" href="/login">Connexion</a>
+            <a class="btn btn-primary" href="/register">Inscription</a>
+        }
+        else
+        {
+            <div class="user-menu" @onclick="ToggleMenu">
+                <span class="avatar">@UserInitials</span>
+                <div class="user-info">
+                    <div class="user-name">@currentUser?.FullName</div>
+                    <div class="user-role">@currentUser?.Role</div>
+                </div>
+                <i class="bi bi-chevron-down"></i>
+                @if (showMenu)
+                {
+                    <div class="user-dropdown">
+                        <a @onclick="@(() => GoTo(MyCoursesPath))"><i class="bi bi-journal-text"></i> Mes cours</a>
+                        <a @onclick="@(() => GoTo(MyResultsPath))"><i class="bi bi-bar-chart"></i> Résultats</a>
+                        <a @onclick="@(() => GoTo(ProfilePath))"><i class="bi bi-person-circle"></i> Mon profil</a>
+                        <button class="dropdown-logout" @onclick="LogoutAsync"><i class="bi bi-box-arrow-right"></i> Déconnexion</button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</header>
+
+<nav class="nav-bar">
+    <NavLink class="nav-pill" href="/" Match="NavLinkMatch.All"><i class="bi bi-house-door"></i> Accueil</NavLink>
+    <NavLink class="nav-pill" href="/courses"><i class="bi bi-mortarboard"></i> Tous les cours</NavLink>
+    <NavLink class="nav-pill" href="/my-courses"><i class="bi bi-journal-text"></i> Mes cours</NavLink>
+    <NavLink class="nav-pill" href="/my-results"><i class="bi bi-bar-chart"></i> Résultats</NavLink>
+    <NavLink class="nav-pill" href="/quizzes"><i class="bi bi-ui-checks-grid"></i> Quizzes</NavLink>
+</nav>
+
+<main class="main-shell">
+    @Body
+</main>
+
+@code {
+    private const string MyCoursesPath = "/my-courses";
+    private const string MyResultsPath = "/my-results";
+    private const string ProfilePath = "/profile";
+    private string searchTerm = string.Empty;
+    private bool showMenu;
+    private bool isAuthenticated;
+    private CurrentUserDto? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SyncUserAsync();
+        AuthStateProvider.AuthenticationStateChanged += async _ => await SyncUserAsync();
+    }
+
+    private async Task SyncUserAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = state.User.Identity?.IsAuthenticated == true;
+
+        if (isAuthenticated)
+        {
+            currentUser = new CurrentUserDto
+            {
+                Email = state.User.FindFirstValue(ClaimTypes.Email) ?? string.Empty,
+                FirstName = (state.User.Identity?.Name ?? string.Empty).Split(' ').FirstOrDefault() ?? string.Empty,
+                LastName = (state.User.Identity?.Name ?? string.Empty).Split(' ').Skip(1).FirstOrDefault() ?? string.Empty,
+                Role = state.User.FindFirstValue(ClaimTypes.Role) ?? "Student",
+                Id = int.TryParse(state.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0
+            };
+        }
+        else
+        {
+            currentUser = null;
+        }
+
+        StateHasChanged();
+    }
+
+    private string UserInitials
+    {
+        get
+        {
+            if (currentUser == null)
+                return "U";
+            var first = string.IsNullOrWhiteSpace(currentUser.FirstName) ? currentUser.Email : currentUser.FirstName;
+            var second = currentUser.LastName;
+            var initials = $"{first.FirstOrDefault()}{second.FirstOrDefault()}".Trim();
+            return string.IsNullOrWhiteSpace(initials) ? "U" : initials.ToUpperInvariant();
+        }
+    }
+
+    private void ToggleMenu()
+    {
+        showMenu = !showMenu;
+    }
+
+    private void GoHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void GoTo(string path)
+    {
+        showMenu = false;
+        Navigation.NavigateTo(path);
+    }
+
+    private async Task LogoutAsync()
+    {
+        showMenu = false;
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    private void OnSearch()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            Navigation.NavigateTo("/courses");
+            return;
+        }
+
+        Navigation.NavigateTo($"/courses?search={Uri.EscapeDataString(searchTerm)}");
+    }
+}

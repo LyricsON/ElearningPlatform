@@ -1,0 +1,36 @@
+<div class="card course-card">
+    <div class="course-card__header">
+        <span class="badge">@Course.CategoryName ?? "Uncategorized"</span>
+        <span class="muted">Instructor: @(!string.IsNullOrWhiteSpace(Course.InstructorName) ? Course.InstructorName : $"ID #{Course.InstructorId}")</span>
+    </div>
+    <h5>@Course.Title</h5>
+    <p>@(string.IsNullOrWhiteSpace(Course.Description) ? "No description provided." : Course.Description)</p>
+
+    <div class="course-meta">
+        <span><i class="bi bi-play-circle"></i> Lessons: @(LessonCount?.ToString() ?? "N/A")</span>
+        <span><i class="bi bi-calendar3"></i> Added @Course.CreatedAt.ToShortDateString()</span>
+    </div>
+
+    @if (IsEnrolled)
+    {
+        <div class="progress mt-2">
+            <div class="progress-bar" style="width:@ProgressPercent%"></div>
+        </div>
+        <small class="muted">Progress: @ProgressPercent%</small>
+    }
+
+    <div class="card-actions">
+        <button class="btn btn-primary" @onclick="() => OnPrimaryAction.InvokeAsync(Course.Id)">
+            @PrimaryText
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CourseDto Course { get; set; } = default!;
+    [Parameter] public int? LessonCount { get; set; }
+    [Parameter] public bool IsEnrolled { get; set; }
+    [Parameter] public int ProgressPercent { get; set; }
+    [Parameter] public string PrimaryText { get; set; } = "View";
+    [Parameter] public EventCallback<int> OnPrimaryAction { get; set; }
+}

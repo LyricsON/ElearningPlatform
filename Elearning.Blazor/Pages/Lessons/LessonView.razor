@@ -1,0 +1,129 @@
+@page "/lessons/{id:int}"
+
+@inject ILessonsApiClient LessonsApi
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <div>
+        <p class="muted">Lesson</p>
+        <h2>@(lesson?.Title ?? "Lesson")</h2>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading"><span class="spinner"></span> Loading lesson...</div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert">@errorMessage</div>
+}
+else if (lesson is null)
+{
+    <div class="alert">Lesson not found.</div>
+}
+else
+{
+    <div class="card" style="margin-bottom:16px;">
+        <div class="page-header">
+            <div>
+                <h4>@lesson.Title</h4>
+                <p class="muted">Order #@lesson.OrderNumber @(lesson.DurationMinutes.HasValue ? $"• {lesson.DurationMinutes} min" : string.Empty)</p>
+            </div>
+        </div>
+        <div class="video-placeholder">
+            @if (!string.IsNullOrWhiteSpace(lesson.VideoUrl))
+            {
+                <a href="@lesson.VideoUrl" target="_blank" class="btn btn-primary">Open video</a>
+            }
+            else
+            {
+                <p class="muted">No video provided. Content coming soon.</p>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="page-header">
+            <h5>Navigate lessons</h5>
+            <div class="card-actions">
+                <button class="btn btn-outline" disabled="@(previousLesson is null)" @onclick="GoPrevious">Previous</button>
+                <button class="btn btn-primary" disabled="@(nextLesson is null)" @onclick="GoNext">Next</button>
+            </div>
+        </div>
+        <p class="muted">Course outline</p>
+        <ul style="list-style:none;padding:0;margin:0;">
+            @foreach (var item in courseLessons.OrderBy(l => l.OrderNumber))
+            {
+                <li style="padding:8px 0;border-bottom:1px solid var(--border);">
+                    <button class="btn btn-outline" style="width:100%;justify-content:flex-start;" @onclick="@(() => Navigation.NavigateTo($"/lessons/{item.Id}"))">
+                        <strong>@item.OrderNumber.</strong>&nbsp;@item.Title
+                        @if (item.Id == lesson.Id)
+                        {
+                            <span class="tag" style="margin-left:auto;">Current</span>
+                        }
+                    </button>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private LessonDto? lesson;
+    private List<LessonDto> courseLessons = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private LessonDto? previousLesson;
+    private LessonDto? nextLesson;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadLessonAsync();
+    }
+
+    private async Task LoadLessonAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            lesson = await LessonsApi.GetLessonByIdAsync(Id);
+            if (lesson != null)
+            {
+                courseLessons = await LessonsApi.GetLessonsAsync(lesson.CourseId);
+                var ordered = courseLessons.OrderBy(l => l.OrderNumber).ToList();
+                var index = ordered.FindIndex(l => l.Id == lesson.Id);
+                previousLesson = index > 0 ? ordered[index - 1] : null;
+                nextLesson = index >= 0 && index < ordered.Count - 1 ? ordered[index + 1] : null;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load lesson: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoPrevious()
+    {
+        if (previousLesson != null)
+        {
+            Navigation.NavigateTo($"/lessons/{previousLesson.Id}");
+        }
+    }
+
+    private void GoNext()
+    {
+        if (nextLesson != null)
+        {
+            Navigation.NavigateTo($"/lessons/{nextLesson.Id}");
+        }
+    }
+}

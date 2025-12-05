@@ -1,0 +1,99 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.WebUtilities
+
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="auth-shell">
+    <div class="auth-card card">
+        <h3>Connexion</h3>
+        <p class="muted">Accédez à votre compte pour continuer.</p>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert">@errorMessage</div>
+        }
+
+        <EditForm Model="model" OnValidSubmit="HandleLoginAsync">
+            <DataAnnotationsValidator />
+            <div class="form-group">
+                <label>Email</label>
+                <InputText class="input-control" @bind-Value="model.Email" />
+                <ValidationMessage For="@(() => model.Email)" />
+            </div>
+            <div class="form-group">
+                <label>Mot de passe</label>
+                <InputText class="input-control" @bind-Value="model.Password" type="password" />
+                <ValidationMessage For="@(() => model.Password)" />
+            </div>
+            <button class="btn btn-primary w-100" type="submit" disabled="@isSubmitting">
+                @(isSubmitting ? "Connexion..." : "Se connecter")
+            </button>
+        </EditForm>
+
+        <p class="muted small mt-2">
+            Pas encore de compte ?
+            <a href="/register">Inscrivez-vous</a>
+        </p>
+    </div>
+</div>
+
+@code {
+    private LoginForm model = new();
+    private bool isSubmitting;
+    private string? errorMessage;
+    private string returnUrl = "/";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+        returnUrl = query.TryGetValue("returnUrl", out var r) ? r.ToString() : "/";
+    }
+
+    private async Task HandleLoginAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var success = await AuthService.LoginAsync(model.Email, model.Password);
+
+            if (success)
+            {
+                Navigation.NavigateTo(string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl, forceLoad: true);
+            }
+            else
+            {
+                errorMessage = "Identifiants invalides.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"La connexion a échoué : {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private class LoginForm
+    {
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        public string Password { get; set; } = string.Empty;
+    }
+}

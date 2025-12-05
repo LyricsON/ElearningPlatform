@@ -1,0 +1,81 @@
+@page "/quizzes"
+
+@inject IQuizzesApiClient QuizzesApi
+@inject ICoursesApiClient CoursesApi
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <div>
+        <p class="muted">Assessments</p>
+        <h2>Quizzes</h2>
+    </div>
+</div>
+
+<div class="card">
+    @if (isLoading)
+    {
+        <div class="loading"><span class="spinner"></span> Loading quizzes...</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert">@errorMessage</div>
+    }
+    else if (!quizzes.Any())
+    {
+        <p class="muted">No quizzes available.</p>
+    }
+    else
+    {
+        <div class="course-grid">
+            @foreach (var quiz in quizzes)
+            {
+                <div class="card">
+                    <div class="muted">@CourseName(quiz.CourseId)</div>
+                    <h5>@quiz.Title</h5>
+                    <p>@(string.IsNullOrWhiteSpace(quiz.Description) ? "No description provided." : quiz.Description)</p>
+                    <button class="btn btn-primary" @onclick="@(() => Navigation.NavigateTo($"/quizzes/{quiz.Id}"))">Take quiz</button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<QuizDto> quizzes = new();
+    private List<CourseDto> courses = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var quizzesTask = QuizzesApi.GetQuizzesAsync();
+            var coursesTask = CoursesApi.GetCoursesAsync();
+            await Task.WhenAll(quizzesTask, coursesTask);
+
+            quizzes = quizzesTask.Result ?? new List<QuizDto>();
+            courses = coursesTask.Result ?? new List<CourseDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load quizzes: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string CourseName(int courseId)
+    {
+        return courses.FirstOrDefault(c => c.Id == courseId)?.Title ?? $"Course #{courseId}";
+    }
+}

@@ -1,0 +1,207 @@
+@page "/courses/{id:int}"
+@using System.Security.Claims
+
+@inject ICoursesApiClient CoursesApi
+@inject IEnrollmentsApiClient EnrollmentsApi
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <div>
+        <p class="muted">Cours</p>
+        <h2>@(course?.Title ?? "Détail du cours")</h2>
+    </div>
+    @if (course is not null)
+    {
+        <div class="tag">@course.CategoryName ?? "Sans catégorie"</div>
+    }
+</div>
+
+@if (isLoading)
+{
+    <div class="loading"><span class="spinner"></span> Chargement du cours...</div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert">@errorMessage</div>
+}
+else if (course is null)
+{
+    <div class="alert">Cours introuvable.</div>
+}
+else
+{
+    <div class="course-hero">
+        <div>
+            <h2>@course.Title</h2>
+            <p>@(string.IsNullOrWhiteSpace(course.Description) ? "Pas de description pour le moment." : course.Description)</p>
+            <div class="course-stats">
+                <span><i class="bi bi-person-badge"></i> @(!string.IsNullOrWhiteSpace(course.InstructorName) ? course.InstructorName : $"Instructeur #{course.InstructorId}")</span>
+                <span><i class="bi bi-play-circle"></i> @course.Lessons.Count() leçons</span>
+                <span><i class="bi bi-ui-checks-grid"></i> @course.Quizzes.Count() quiz</span>
+            </div>
+        </div>
+        <div class="course-cta">
+            @if (isEnrolled)
+            {
+                <button class="btn btn-primary" @onclick="ContinueLearning">Continuer le cours</button>
+                <div class="progress">
+                    <div class="progress-bar" style="width:@enrollmentProgress%"></div>
+                </div>
+                <small class="muted">Progression: @enrollmentProgress%</small>
+            }
+            else
+            {
+                <button class="btn btn-primary" @onclick="EnrollAsync" disabled="@isEnrolling">
+                    @(isEnrolling ? "Inscription..." : "S'inscrire maintenant")
+                </button>
+                <p class="muted">Accès illimité aux leçons et quiz.</p>
+            }
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="card">
+            <div class="page-header">
+                <h5>Contenu du cours</h5>
+            </div>
+            @if (!course.Lessons.Any())
+            {
+                <p class="muted">Aucune leçon pour l'instant.</p>
+            }
+            else
+            {
+                <ul class="lesson-list">
+                    @foreach (var lesson in course.Lessons.OrderBy(l => l.OrderNumber))
+                    {
+                        <li>
+                            <div>
+                                <strong>@lesson.OrderNumber. @lesson.Title</strong>
+                                <div class="muted">@(lesson.DurationMinutes.HasValue ? $"{lesson.DurationMinutes} min" : "Durée non définie")</div>
+                            </div>
+                            <button class="btn btn-outline" @onclick="@(() => Navigation.NavigateTo($"/lessons/{lesson.Id}"))">
+                                Ouvrir
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="card">
+            <div class="page-header">
+                <h5>Quizzes</h5>
+            </div>
+            @if (!course.Quizzes.Any())
+            {
+                <p class="muted">Pas de quiz pour ce cours.</p>
+            }
+            else
+            {
+                <div class="course-grid">
+                    @foreach (var quiz in course.Quizzes)
+                    {
+                        <div class="card">
+                            <h6>@quiz.Title</h6>
+                            <p>@(string.IsNullOrWhiteSpace(quiz.Description) ? "Pas de description." : quiz.Description)</p>
+                            <button class="btn btn-primary" @onclick="@(() => Navigation.NavigateTo($"/quizzes/{quiz.Id}"))">Commencer</button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private CourseDetailsDto? course;
+    private bool isLoading = true;
+    private bool isEnrolling;
+    private string? errorMessage;
+    private bool isEnrolled;
+    private int enrollmentProgress;
+    private int? currentUserId;
+    private bool isAuthenticated;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadCourseAsync();
+    }
+
+    private async Task LoadCourseAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+            currentUserId = int.TryParse(authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;
+
+            course = await CoursesApi.GetCourseByIdAsync(Id);
+            if (course != null && currentUserId.HasValue)
+            {
+                var enrollments = await EnrollmentsApi.GetEnrollmentsAsync(currentUserId, Id);
+                var enrollment = enrollments.FirstOrDefault();
+                isEnrolled = enrollment != null;
+                enrollmentProgress = enrollment?.ProgressPercent ?? 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load course: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task EnrollAsync()
+    {
+        if (!isAuthenticated || !currentUserId.HasValue)
+        {
+            Navigation.NavigateTo($"/login?returnUrl=/courses/{Id}", forceLoad: true);
+            return;
+        }
+
+        isEnrolling = true;
+        try
+        {
+            var created = await EnrollmentsApi.CreateEnrollmentAsync(new CreateEnrollmentDto
+            {
+                CourseId = Id,
+                UserId = currentUserId.Value
+            });
+
+            if (created)
+            {
+                isEnrolled = true;
+                enrollmentProgress = 0;
+            }
+            else
+            {
+                errorMessage = "L'inscription a échoué.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Enrollment failed: {ex.Message}";
+        }
+        finally
+        {
+            isEnrolling = false;
+        }
+    }
+
+    private void ContinueLearning()
+    {
+        var firstLesson = course?.Lessons.OrderBy(l => l.OrderNumber).FirstOrDefault();
+        if (firstLesson != null)
+        {
+            Navigation.NavigateTo($"/lessons/{firstLesson.Id}");
+        }
+    }
+}

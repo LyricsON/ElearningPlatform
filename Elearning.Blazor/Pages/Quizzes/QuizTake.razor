@@ -1,0 +1,175 @@
+@page "/quizzes/{id:int}"
+@using System.Security.Claims
+
+@inject IQuizzesApiClient QuizzesApi
+@inject IQuizQuestionsApiClient QuestionsApi
+@inject IQuizResultsApiClient QuizResultsApi
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <div>
+        <p class="muted">Quiz</p>
+        <h2>@(quiz?.Title ?? "Quiz")</h2>
+    </div>
+</div>
+
+@if (!isAuthenticated)
+{
+    <div class="card">
+        <p class="muted">Vous devez être connecté pour passer ce quiz.</p>
+        <a class="btn btn-primary" href="/login?returnUrl=/quizzes/@Id">Se connecter</a>
+    </div>
+}
+else if (isLoading)
+{
+    <div class="loading"><span class="spinner"></span> Chargement du quiz...</div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert">@errorMessage</div>
+}
+else if (quiz is null)
+{
+    <div class="alert">Quiz introuvable.</div>
+}
+else
+{
+    <div class="card">
+        <p>@(string.IsNullOrWhiteSpace(quiz.Description) ? "Pas de description." : quiz.Description)</p>
+
+        @if (scoreResponse is not null)
+        {
+            <div class="card" style="background:var(--primary-soft);border-color:var(--primary-soft);">
+                <h5>Vous avez obtenu @scoreResponse.Score% (@scoreResponse.CorrectAnswers/@scoreResponse.TotalQuestions correctes)</h5>
+                <p class="muted">Vous pouvez retenter pour améliorer votre score.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var question in questions)
+            {
+                <div class="quiz-question">
+                    <strong>@question.QuestionText</strong>
+                    <div class="quiz-options">
+                        @foreach (var option in OptionsFor(question))
+                        {
+                            <label>
+                                <input type="radio"
+                                       name="@($"q-{question.Id}")"
+                                       value="@option.Value"
+                                       checked="@IsChecked(question.Id, option.Value)"
+                                       @onchange="@(() => SelectAnswer(question.Id, option.Value))" />
+                                <span>@option.Label</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+            }
+
+            <button class="btn btn-primary" @onclick="SubmitAsync" disabled="@isSubmitting">
+                @(isSubmitting ? "Envoi..." : "Soumettre le quiz")
+            </button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private QuizDto? quiz;
+    private List<QuizQuestionDto> questions = new();
+    private Dictionary<int, string> answers = new();
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private string? errorMessage;
+    private QuizScoreResponseDto? scoreResponse;
+    private bool isAuthenticated;
+    private int? currentUserId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadQuizAsync();
+    }
+
+    private async Task LoadQuizAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        scoreResponse = null;
+        answers.Clear();
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+            currentUserId = int.TryParse(authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;
+
+            quiz = await QuizzesApi.GetQuizByIdAsync(Id);
+            questions = await QuestionsApi.GetQuestionsAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load quiz: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectAnswer(int questionId, string value)
+    {
+        answers[questionId] = value;
+    }
+
+    private bool IsChecked(int questionId, string value)
+    {
+        return answers.TryGetValue(questionId, out var current) && string.Equals(current, value, StringComparison.Ordinal);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (isSubmitting || !isAuthenticated || !currentUserId.HasValue)
+            return;
+
+        isSubmitting = true;
+        errorMessage = null;
+        try
+        {
+            var payload = new SubmitQuizDto
+            {
+                QuizId = Id,
+                UserId = currentUserId.Value,
+                Answers = answers.Select(a => new QuizAnswerDto
+                {
+                    QuestionId = a.Key,
+                    SelectedOption = a.Value
+                }).ToList()
+            };
+
+            scoreResponse = await QuizResultsApi.SubmitQuizAsync(payload);
+
+            if (scoreResponse == null)
+            {
+                errorMessage = "Failed to submit quiz. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to submit quiz: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private IEnumerable<(string Label, string Value)> OptionsFor(QuizQuestionDto question)
+    {
+        yield return ($"A. {question.OptionA}", "A");
+        yield return ($"B. {question.OptionB}", "B");
+        yield return ($"C. {question.OptionC}", "C");
+        yield return ($"D. {question.OptionD}", "D");
+    }
+}

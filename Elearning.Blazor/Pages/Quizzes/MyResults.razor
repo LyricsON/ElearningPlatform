@@ -1,0 +1,131 @@
+@page "/my-results"
+@using System.Security.Claims
+
+@inject IQuizResultsApiClient QuizResultsApi
+@inject IQuizzesApiClient QuizzesApi
+@inject ICoursesApiClient CoursesApi
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="page-header">
+    <div>
+        <p class="muted">Performance</p>
+        <h2>My Quiz Results</h2>
+    </div>
+</div>
+
+<div class="card">
+    @if (!isAuthenticated)
+    {
+        <p class="muted">Vous devez être connecté pour consulter vos résultats.</p>
+        <a class="btn btn-primary" href="/login?returnUrl=/my-results">Se connecter</a>
+    }
+    else if (isLoading)
+    {
+        <div class="loading"><span class="spinner"></span> Chargement des résultats...</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert">@errorMessage</div>
+    }
+    else if (!rows.Any())
+    {
+        <p class="muted">Aucun résultat de quiz pour le moment.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Quiz</th>
+                    <th>Score</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows)
+                {
+                    <tr>
+                        <td>@row.Course</td>
+                        <td>@row.Quiz</td>
+                        <td>@row.Score%</td>
+                        <td>@row.DateTaken.ToString("yyyy-MM-dd")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private int? currentUserId;
+    private bool isAuthenticated;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private List<ResultRow> rows = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadResultsAsync();
+    }
+
+    private async Task LoadResultsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+            currentUserId = int.TryParse(authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;
+
+            if (!isAuthenticated || !currentUserId.HasValue)
+            {
+                rows = new();
+                return;
+            }
+
+            var resultsTask = QuizResultsApi.GetQuizResultsAsync(currentUserId, null);
+            var quizzesTask = QuizzesApi.GetQuizzesAsync();
+            var coursesTask = CoursesApi.GetCoursesAsync();
+            await Task.WhenAll(resultsTask, quizzesTask, coursesTask);
+
+            var results = resultsTask.Result ?? new List<QuizResultDto>();
+            var quizzes = quizzesTask.Result ?? new List<QuizDto>();
+            var courses = coursesTask.Result ?? new List<CourseDto>();
+
+            rows = results
+                .OrderByDescending(r => r.TakenAt)
+                .Select(r =>
+                {
+                    var quiz = quizzes.FirstOrDefault(q => q.Id == r.QuizId);
+                    var course = courses.FirstOrDefault(c => c.Id == quiz?.CourseId);
+                    return new ResultRow
+                    {
+                        Quiz = quiz?.Title ?? $"Quiz #{r.QuizId}",
+                        Course = course?.Title ?? $"Course #{quiz?.CourseId ?? 0}",
+                        Score = r.Score,
+                        DateTaken = r.TakenAt
+                    };
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load results: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private class ResultRow
+    {
+        public string Course { get; set; } = string.Empty;
+        public string Quiz { get; set; } = string.Empty;
+        public int Score { get; set; }
+        public DateTime DateTaken { get; set; }
+    }
+}

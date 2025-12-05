@@ -1,0 +1,113 @@
+@page "/my-courses"
+@using System.Security.Claims
+
+@inject IEnrollmentsApiClient EnrollmentsApi
+@inject ICoursesApiClient CoursesApi
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <div>
+        <p class="muted">Learning</p>
+        <h2>My Courses</h2>
+    </div>
+</div>
+
+<div class="card">
+@if (!isAuthenticated)
+{
+    <div class="card">
+        <p class="muted">Vous devez être connecté pour accéder à vos cours.</p>
+        <a class="btn btn-primary" href="/login?returnUrl=/my-courses">Se connecter</a>
+    </div>
+}
+else if (isLoading)
+{
+    <div class="loading"><span class="spinner"></span> Chargement...</div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert">@errorMessage</div>
+}
+else if (!items.Any())
+{
+    <p class="muted">Vous n'êtes inscrit à aucun cours pour le moment.</p>
+    <a class="btn btn-outline" href="/courses">Parcourir les cours</a>
+}
+else
+{
+    <div class="course-grid">
+        @foreach (var item in items)
+        {
+            <CourseCard Course="item.Course"
+                        IsEnrolled="true"
+                        ProgressPercent="item.Progress"
+                        PrimaryText="Continuer"
+                        OnPrimaryAction="@HandleNavigate" />
+        }
+    </div>
+}
+</div>
+
+@code {
+    private int? currentUserId;
+    private bool isAuthenticated;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private List<MyCourseItem> items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+            currentUserId = int.TryParse(authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
+                ? id
+                : null;
+
+            if (!isAuthenticated || !currentUserId.HasValue)
+            {
+                items = new();
+                return;
+            }
+
+            var enrollments = await EnrollmentsApi.GetEnrollmentsAsync(currentUserId, null);
+            var courses = await CoursesApi.GetCoursesAsync();
+
+            items = enrollments
+                .Select(e => new MyCourseItem
+                {
+                    Course = courses.FirstOrDefault(c => c.Id == e.CourseId) ?? new CourseDto { Id = e.CourseId, Title = $"Cours #{e.CourseId}" },
+                    Progress = e.ProgressPercent
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load courses: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void HandleNavigate(int courseId)
+    {
+        Navigation.NavigateTo($"/courses/{courseId}");
+    }
+
+    private class MyCourseItem
+    {
+        public CourseDto Course { get; set; } = new();
+        public int Progress { get; set; }
+    }
+}

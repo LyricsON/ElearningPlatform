@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "Nouveau profil",
+    "Projects": [
+      {
+        "Path": "Elearning.Api\\Elearning.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Elearning.Blazor\\Elearning.Blazor.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
