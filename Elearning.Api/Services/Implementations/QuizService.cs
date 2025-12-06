@@ -71,6 +71,19 @@ public class QuizService : IQuizService
         }
     }
 
+    public async Task<bool> VerifyInstructorOwnership(int quizId, int instructorId)
+    {
+        var quiz = await _quizRepository.GetByIdAsync(quizId);
+        if (quiz == null)
+            return false;
+
+        var course = await _courseRepository.GetByIdAsync(quiz.CourseId);
+        if (course == null)
+            return false;
+
+        return course.InstructorId == instructorId;
+    }
+
     private async Task EnsureCourseExists(int courseId)
     {
         var course = await _courseRepository.GetByIdAsync(courseId);

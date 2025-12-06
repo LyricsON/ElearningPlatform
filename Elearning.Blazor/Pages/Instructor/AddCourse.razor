@@ -1,0 +1,132 @@
+@page "/instructor/add-course"
+@using Elearning.Blazor.Models
+@using Elearning.Blazor.Services
+@inject ICoursesApiClient CoursesClient
+@inject ICategoriesApiClient CategoriesClient
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Ajouter un cours</PageTitle>
+
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h2>Ajouter un nouveau cours</h2>
+        </div>
+        <div class="card-body">
+            <EditForm Model="@course" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label>Titre du cours</label>
+                    <InputText @bind-Value="course.Title" class="input-control" placeholder="Ex: Introduction à C#" />
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <InputTextArea @bind-Value="course.Description" class="input-control" rows="5" placeholder="Décrivez votre cours..." />
+                </div>
+
+                <div class="form-group">
+                    <label>Catégorie</label>
+                    <InputSelect @bind-Value="course.CategoryId" class="input-control">
+                        <option value="">-- Sélectionnez une catégorie --</option>
+                        @foreach (var category in categories)
+                        {
+                            <option value="@category.Id">@category.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="form-group">
+                    <label>URL de la miniature</label>
+                    <InputText @bind-Value="course.ThumbnailUrl" class="input-control" placeholder="https://..." />
+                </div>
+
+                <div class="form-group">
+                    <label>Niveau de difficulté</label>
+                    <InputSelect @bind-Value="course.DifficultyLevel" class="input-control">
+                        <option value="">-- Sélectionnez un niveau --</option>
+                        <option value="Beginner">Débutant</option>
+                        <option value="Intermediate">Intermédiaire</option>
+                        <option value="Advanced">Avancé</option>
+                    </InputSelect>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span>Création en cours...</span>
+                        }
+                        else
+                        {
+                            <span>Créer le cours</span>
+                        }
+                    </button>
+                    <button type="button" class="btn btn-outline" @onclick="Cancel">Annuler</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private CreateCourseDto course = new();
+    private List<CourseCategoryDto> categories = new();
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null || currentUser.Role != "Instructor")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        course.InstructorId = currentUser.Id;
+        categories = await CategoriesClient.GetCategoriesAsync();
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await CoursesClient.CreateCourseAsync(course);
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/instructor/courses");
+            }
+            else
+            {
+                errorMessage = string.IsNullOrWhiteSpace(result.Error)
+                    ? "Échec de la création du cours."
+                    : $"Échec de la création du cours : {result.Error}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/instructor/courses");
+    }
+}

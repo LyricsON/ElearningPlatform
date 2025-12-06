@@ -27,6 +27,10 @@ public class RegisterRequestDto
 
     [Required, Compare(nameof(Password), ErrorMessage = "Les mots de passe doivent correspondre.")]
     public string ConfirmPassword { get; set; } = string.Empty;
+
+    [Required]
+    [RegularExpression("Student|Instructor", ErrorMessage = "Choisissez Student ou Instructor.")]
+    public string Role { get; set; } = "Student";
 }
 
 public class LoginResponseDto

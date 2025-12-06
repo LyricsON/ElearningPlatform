@@ -24,6 +24,9 @@ public class Course
     [MaxLength(500)]
     public string? ThumbnailUrl { get; set; }
 
+    [MaxLength(50)]
+    public string? DifficultyLevel { get; set; } // Beginner, Intermediate, Advanced
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation

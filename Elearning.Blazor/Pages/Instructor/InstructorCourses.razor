@@ -1,0 +1,182 @@
+@page "/instructor/courses"
+@using Elearning.Blazor.Models
+@using Elearning.Blazor.Services
+@inject ICoursesApiClient CoursesClient
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Mes cours - Instructeur</PageTitle>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Mes cours</h1>
+        <button class="btn btn-primary" @onclick="NavigateToAddCourse">
+            <i class="bi bi-plus-circle"></i> Ajouter un cours
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-spinner">Chargement...</div>
+    }
+    else if (!courses.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-mortarboard" style="font-size: 4rem; opacity: 0.3;"></i>
+            <h3>Vous n'avez pas encore de cours</h3>
+            <p>Commencez par créer votre premier cours</p>
+            <button class="btn btn-primary" @onclick="NavigateToAddCourse">
+                <i class="bi bi-plus-circle"></i> Créer un cours
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="courses-grid">
+            @foreach (var course in courses)
+            {
+                <div class="course-card">
+                    @if (!string.IsNullOrEmpty(course.ThumbnailUrl))
+                    {
+                        <img src="@course.ThumbnailUrl" alt="@course.Title" class="course-thumbnail" />
+                    }
+                    else
+                    {
+                        <div class="course-thumbnail-placeholder">
+                            <i class="bi bi-mortarboard"></i>
+                        </div>
+                    }
+                    <div class="course-info">
+                        <h3>@course.Title</h3>
+                        <p class="course-description">@course.Description</p>
+                        @if (!string.IsNullOrEmpty(course.DifficultyLevel))
+                        {
+                            <span class="badge">@GetDifficultyLabel(course.DifficultyLevel)</span>
+                        }
+                        @if (!string.IsNullOrEmpty(course.CategoryName))
+                        {
+                            <span class="badge">@course.CategoryName</span>
+                        }
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline" @onclick="() => NavigateToManage(course.Id)">
+                            <i class="bi bi-gear"></i> Gérer
+                        </button>
+                        <button class="btn btn-sm btn-outline" @onclick="() => NavigateToEdit(course.Id)">
+                            <i class="bi bi-pencil"></i> Modifier
+                        </button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(course)">
+                            <i class="bi bi-trash"></i> Supprimer
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (courseToDelete != null)
+    {
+        <div class="modal-overlay" @onclick="CancelDelete">
+            <div class="modal-dialog" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h3>Confirmer la suppression</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer le cours <strong>@courseToDelete.Title</strong> ?</p>
+                    <p class="text-warning">Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @onclick="CancelDelete">Annuler</button>
+                    <button class="btn btn-danger" @onclick="DeleteCourse" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span>Suppression...</span>
+                        }
+                        else
+                        {
+                            <span>Supprimer</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CourseDto> courses = new();
+    private bool isLoading = true;
+    private CourseDto? courseToDelete;
+    private bool isDeleting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null || currentUser.Role != "Instructor")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        await LoadCourses(currentUser.Id);
+    }
+
+    private async Task LoadCourses(int instructorId)
+    {
+        isLoading = true;
+        courses = await CoursesClient.GetCoursesAsync(instructorId: instructorId);
+        isLoading = false;
+    }
+
+    private void NavigateToAddCourse()
+    {
+        Navigation.NavigateTo("/instructor/add-course");
+    }
+
+    private void NavigateToManage(int courseId)
+    {
+        Navigation.NavigateTo($"/instructor/manage/{courseId}");
+    }
+
+    private void NavigateToEdit(int courseId)
+    {
+        Navigation.NavigateTo($"/instructor/edit/{courseId}");
+    }
+
+    private void ConfirmDelete(CourseDto course)
+    {
+        courseToDelete = course;
+    }
+
+    private void CancelDelete()
+    {
+        courseToDelete = null;
+    }
+
+    private async Task DeleteCourse()
+    {
+        if (courseToDelete == null) return;
+
+        isDeleting = true;
+        var success = await CoursesClient.DeleteCourseAsync(courseToDelete.Id);
+        
+        if (success)
+        {
+            courses.Remove(courseToDelete);
+            courseToDelete = null;
+        }
+        
+        isDeleting = false;
+    }
+
+    private string GetDifficultyLabel(string level)
+    {
+        return level switch
+        {
+            "Beginner" => "Débutant",
+            "Intermediate" => "Intermédiaire",
+            "Advanced" => "Avancé",
+            _ => level
+        };
+    }
+}

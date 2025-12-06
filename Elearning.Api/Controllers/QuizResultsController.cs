@@ -1,6 +1,8 @@
 using Elearning.Api.Dtos;
 using Elearning.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Elearning.Api.Controllers;
 
@@ -16,10 +18,20 @@ public class QuizResultsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<IEnumerable<QuizResultDto>>> GetQuizResults(
         [FromQuery] int? userId,
         [FromQuery] int? quizId)
     {
+        var currentUserId = GetCurrentUserId();
+        var isAdmin = User.IsInRole("Admin");
+        var isInstructor = User.IsInRole("Instructor");
+
+        if (!isAdmin && !isInstructor)
+        {
+            userId = currentUserId;
+        }
+
         IEnumerable<QuizResultDto> results;
 
         if (userId.HasValue)
@@ -33,20 +45,37 @@ public class QuizResultsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<QuizResultDto>> GetQuizResult(int id)
     {
         var result = await _quizResultService.GetByIdAsync(id);
         if (result == null)
             return NotFound();
 
+        var currentUserId = GetCurrentUserId();
+        var isPrivileged = User.IsInRole("Admin") || User.IsInRole("Instructor");
+        if (!isPrivileged && (currentUserId == null || result.UserId != currentUserId.Value))
+            return Forbid();
+
         return Ok(result);
     }
 
     [HttpPost]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<QuizResultDto>> CreateQuizResult([FromBody] CreateQuizResultDto dto)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        var currentUserId = GetCurrentUserId();
+        var isAdmin = User.IsInRole("Admin");
+        var isInstructor = User.IsInRole("Instructor");
+        if (!isAdmin && !isInstructor)
+        {
+            if (currentUserId == null)
+                return Forbid();
+            dto.UserId = currentUserId.Value;
+        }
 
         try
         {
@@ -60,10 +89,21 @@ public class QuizResultsController : ControllerBase
     }
 
     [HttpPost("submit")]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<QuizScoreResponseDto>> SubmitQuiz([FromBody] SubmitQuizDto dto)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        var currentUserId = GetCurrentUserId();
+        var isAdmin = User.IsInRole("Admin");
+        var isInstructor = User.IsInRole("Instructor");
+        if (!isAdmin && !isInstructor)
+        {
+            if (currentUserId == null)
+                return Forbid();
+            dto.UserId = currentUserId.Value;
+        }
 
         try
         {
@@ -81,9 +121,16 @@ public class QuizResultsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteQuizResult(int id)
     {
         var deleted = await _quizResultService.DeleteAsync(id);
         return deleted ? NoContent() : NotFound();
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(idClaim, out var id) ? id : null;
     }
 }

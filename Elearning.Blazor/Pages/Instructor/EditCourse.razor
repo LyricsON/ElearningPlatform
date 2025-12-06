@@ -1,0 +1,171 @@
+@page "/instructor/edit/{CourseId:int}"
+@using Elearning.Blazor.Models
+@using Elearning.Blazor.Services
+@inject ICoursesApiClient CoursesClient
+@inject ICategoriesApiClient CategoriesClient
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Modifier le cours</PageTitle>
+
+<div class="container">
+    @if (isLoading)
+    {
+        <div class="loading-spinner">Chargement...</div>
+    }
+    else if (course == null)
+    {
+        <div class="alert alert-danger">Cours non trouvé.</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <h2>Modifier le cours</h2>
+            </div>
+            <div class="card-body">
+                <EditForm Model="@course" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="form-group">
+                        <label>Titre du cours</label>
+                        <InputText @bind-Value="course.Title" class="input-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <InputTextArea @bind-Value="course.Description" class="input-control" rows="5" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Catégorie</label>
+                        <InputSelect @bind-Value="course.CategoryId" class="input-control">
+                            <option value="">-- Sélectionnez une catégorie --</option>
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category.Id">@category.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="form-group">
+                        <label>URL de la miniature</label>
+                        <InputText @bind-Value="course.ThumbnailUrl" class="input-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Niveau de difficulté</label>
+                        <InputSelect @bind-Value="course.DifficultyLevel" class="input-control">
+                            <option value="">-- Sélectionnez un niveau --</option>
+                            <option value="Beginner">Débutant</option>
+                            <option value="Intermediate">Intermédiaire</option>
+                            <option value="Advanced">Avancé</option>
+                        </InputSelect>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span>Enregistrement...</span>
+                            }
+                            else
+                            {
+                                <span>Enregistrer les modifications</span>
+                            }
+                        </button>
+                        <button type="button" class="btn btn-outline" @onclick="Cancel">Annuler</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private UpdateCourseDto? course;
+    private List<CourseCategoryDto> categories = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+    private int instructorId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null || currentUser.Role != "Instructor")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        instructorId = currentUser.Id;
+        categories = await CategoriesClient.GetCategoriesAsync();
+        
+        var existingCourse = await CoursesClient.GetCourseByIdAsync(CourseId);
+        if (existingCourse != null)
+        {
+            // Verify ownership
+            if (existingCourse.InstructorId != instructorId)
+            {
+                Navigation.NavigateTo("/instructor/courses");
+                return;
+            }
+
+            course = new UpdateCourseDto
+            {
+                Title = existingCourse.Title,
+                Description = existingCourse.Description,
+                CategoryId = existingCourse.CategoryId,
+                ThumbnailUrl = existingCourse.ThumbnailUrl,
+                DifficultyLevel = existingCourse.DifficultyLevel,
+                InstructorId = instructorId
+            };
+        }
+
+        isLoading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (course == null) return;
+
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var success = await CoursesClient.UpdateCourseAsync(CourseId, course);
+            if (success)
+            {
+                Navigation.NavigateTo("/instructor/courses");
+            }
+            else
+            {
+                errorMessage = "Échec de la mise à jour du cours.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/instructor/courses");
+    }
+}

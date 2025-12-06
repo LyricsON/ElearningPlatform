@@ -12,6 +12,7 @@ public class CourseDto
     public int InstructorId { get; set; }
     public string? InstructorName { get; set; }
     public string? ThumbnailUrl { get; set; }
+    public string? DifficultyLevel { get; set; } // Beginner, Intermediate, Advanced
     public DateTime CreatedAt { get; set; }
 }
 
@@ -35,6 +36,9 @@ public class CreateCourseDto
 
     [MaxLength(500)]
     public string? ThumbnailUrl { get; set; }
+
+    [MaxLength(50)]
+    public string? DifficultyLevel { get; set; } // Beginner, Intermediate, Advanced
 }
 
 public class UpdateCourseDto
@@ -51,4 +55,7 @@ public class UpdateCourseDto
 
     [MaxLength(500)]
     public string? ThumbnailUrl { get; set; }
+
+    [MaxLength(50)]
+    public string? DifficultyLevel { get; set; } // Beginner, Intermediate, Advanced
 }

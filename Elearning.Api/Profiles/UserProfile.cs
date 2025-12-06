@@ -11,9 +11,9 @@ public class UserProfile : Profile
         CreateMap<AppUser, UserDto>();
 
         CreateMap<CreateUserDto, AppUser>()
-            .ForMember(dest => dest.PasswordHash, opt => opt.MapFrom(src => src.Password));
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore());
 
         CreateMap<UpdateUserDto, AppUser>()
-            .ForMember(dest => dest.PasswordHash, opt => opt.MapFrom(src => src.Password));
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore());
     }
 }

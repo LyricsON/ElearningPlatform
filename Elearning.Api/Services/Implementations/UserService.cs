@@ -3,6 +3,7 @@ using Elearning.Api.Dtos;
 using Elearning.Api.Models;
 using Elearning.Api.Repositories.Interfaces;
 using Elearning.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Identity;
 
 namespace Elearning.Api.Services.Implementations;
 
@@ -10,11 +11,13 @@ public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
+    private readonly IPasswordHasher<AppUser> _passwordHasher;
 
-    public UserService(IUserRepository userRepository, IMapper mapper)
+    public UserService(IUserRepository userRepository, IMapper mapper, IPasswordHasher<AppUser> passwordHasher)
     {
         _userRepository = userRepository;
         _mapper = mapper;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<IEnumerable<UserDto>> GetAllAsync()
@@ -41,7 +44,21 @@ public class UserService : IUserService
         if (existing != null)
             throw new InvalidOperationException("A user with this email already exists.");
 
-        var user = _mapper.Map<AppUser>(dto);
+        ValidateRole(dto.Role);
+
+        var user = new AppUser
+        {
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            Email = dto.Email,
+            Role = dto.Role
+        };
+
+        if (!string.IsNullOrWhiteSpace(dto.Password))
+        {
+            user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
+        }
+
         var created = await _userRepository.CreateAsync(user);
         return _mapper.Map<UserDto>(created);
     }
@@ -56,9 +73,31 @@ public class UserService : IUserService
         if (duplicate != null && duplicate.Id != id)
             throw new InvalidOperationException("A user with this email already exists.");
 
-        _mapper.Map(dto, user);
-        user.Id = id;
+        ValidateRole(dto.Role);
 
+        user.FirstName = dto.FirstName;
+        user.LastName = dto.LastName;
+        user.Email = dto.Email;
+        user.Role = dto.Role;
+
+        if (!string.IsNullOrWhiteSpace(dto.Password))
+        {
+            user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
+        }
+
+        await _userRepository.UpdateAsync(user);
+        return true;
+    }
+
+    public async Task<bool> UpdateRoleAsync(int id, string role)
+    {
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+            return false;
+
+        ValidateRole(role);
+
+        user.Role = role;
         await _userRepository.UpdateAsync(user);
         return true;
     }
@@ -74,5 +113,11 @@ public class UserService : IUserService
         {
             return false;
         }
+    }
+
+    private static void ValidateRole(string role)
+    {
+        if (role != "Student" && role != "Instructor" && role != "Admin")
+            throw new InvalidOperationException("Invalid role. Must be Student, Instructor, or Admin.");
     }
 }

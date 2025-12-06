@@ -9,6 +9,7 @@ public interface IUsersApiClient
     Task<UserDto?> GetUserByIdAsync(int id);
     Task<bool> CreateUserAsync(CreateUserDto dto);
     Task<bool> UpdateUserAsync(int id, UpdateUserDto dto);
+    Task<bool> UpdateUserRoleAsync(int id, string role);
     Task<bool> DeleteUserAsync(int id);
 }
 
@@ -64,6 +65,19 @@ public class UsersApiClient : IUsersApiClient
         try
         {
             var response = await _httpClient.PutAsJsonAsync($"/api/users/{id}", dto);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateUserRoleAsync(int id, string role)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync($"/api/users/{id}/role", new { Role = role });
             return response.IsSuccessStatusCode;
         }
         catch

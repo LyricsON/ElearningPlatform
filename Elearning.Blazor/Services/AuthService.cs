@@ -14,6 +14,9 @@ public interface IAuthService
     Task<CurrentUserDto?> GetCurrentUserAsync();
     CurrentUserDto? CurrentUser { get; }
     bool IsAuthenticated { get; }
+    bool IsStudent { get; }
+    bool IsInstructor { get; }
+    bool IsAdmin { get; }
     string? GetToken();
 }
 
@@ -33,6 +36,9 @@ public class AuthService : IAuthService
 
     public CurrentUserDto? CurrentUser => _authStateProvider.CurrentUser;
     public bool IsAuthenticated => _authStateProvider.CurrentUser != null;
+    public bool IsStudent => CurrentUser?.Role == "Student";
+    public bool IsInstructor => CurrentUser?.Role == "Instructor";
+    public bool IsAdmin => CurrentUser?.Role == "Admin";
 
     public async Task<bool> LoginAsync(string email, string password)
     {

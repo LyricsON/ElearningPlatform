@@ -71,6 +71,19 @@ public class LessonService : ILessonService
         }
     }
 
+    public async Task<bool> VerifyInstructorOwnership(int lessonId, int instructorId)
+    {
+        var lesson = await _lessonRepository.GetByIdAsync(lessonId);
+        if (lesson == null)
+            return false;
+
+        var course = await _courseRepository.GetByIdAsync(lesson.CourseId);
+        if (course == null)
+            return false;
+
+        return course.InstructorId == instructorId;
+    }
+
     private async Task EnsureCourseExists(int courseId)
     {
         var course = await _courseRepository.GetByIdAsync(courseId);

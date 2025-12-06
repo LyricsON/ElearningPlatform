@@ -1,0 +1,486 @@
+@page "/instructor/manage/{CourseId:int}"
+@using Elearning.Blazor.Models
+@using Elearning.Blazor.Services
+@inject ICoursesApiClient CoursesClient
+@inject ILessonsApiClient LessonsClient
+@inject IQuizzesApiClient QuizzesClient
+@inject IQuizQuestionsApiClient QuestionsClient
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Gérer le cours</PageTitle>
+
+<div class="container">
+    @if (isLoading)
+    {
+        <div class="loading-spinner">Chargement...</div>
+    }
+    else if (course == null)
+    {
+        <div class="alert alert-danger">Cours non trouvé ou accès refusé.</div>
+    }
+    else
+    {
+        <div class="page-header">
+            <h1>Gérer: @course.Title</h1>
+            <button class="btn btn-outline" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i> Retour
+            </button>
+        </div>
+
+        <!-- LESSONS SECTION -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Leçons (@lessons.Count)</h3>
+                <button class="btn btn-primary" @onclick="() => ShowAddLessonForm()">
+                    <i class="bi bi-plus"></i> Ajouter une leçon
+                </button>
+            </div>
+            <div class="card-body">
+                @if (showLessonForm)
+                {
+                    <div class="form-section">
+                        <h4>@(editingLesson == null ? "Nouvelle" : "Modifier") Leçon</h4>
+                        <EditForm Model="@lessonForm" OnValidSubmit="SaveLesson">
+                            <DataAnnotationsValidator />
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Titre</label>
+                                    <InputText @bind-Value="lessonForm.Title" class="input-control" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Ordre</label>
+                                    <InputNumber @bind-Value="lessonForm.OrderNumber" class="input-control" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>URL de la vidéo</label>
+                                <InputText @bind-Value="lessonForm.VideoUrl" class="input-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Durée (minutes)</label>
+                                <InputNumber @bind-Value="lessonForm.DurationMinutes" class="input-control" />
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                <button type="button" class="btn btn-outline" @onclick="CancelLessonForm">Annuler</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                }
+
+                @if (lessons.Any())
+                {
+                    <div class="list-group">
+                        @foreach (var lesson in lessons.OrderBy(l => l.OrderNumber))
+                        {
+                            <div class="list-item">
+                                <div>
+                                    <strong>@lesson.OrderNumber. @lesson.Title</strong>
+                                    @if (lesson.DurationMinutes.HasValue)
+                                    {
+                                        <span class="badge">@lesson.DurationMinutes min</span>
+                                    }
+                                </div>
+                                <div class="item-actions">
+                                    <button class="btn btn-sm btn-outline" @onclick="() => ShowEditLessonForm(lesson)">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteLesson(lesson.Id)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">Aucune leçon. Ajoutez-en une pour commencer.</p>
+                }
+            </div>
+        </div>
+
+        <!-- QUIZZES SECTION -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Quiz (@quizzes.Count)</h3>
+                <button class="btn btn-primary" @onclick="ShowAddQuizForm">
+                    <i class="bi bi-plus"></i> Ajouter un quiz
+                </button>
+            </div>
+            <div class="card-body">
+                @if (showQuizForm)
+                {
+                    <div class="form-section">
+                        <h4>@(editingQuiz == null ? "Nouveau" : "Modifier") Quiz</h4>
+                        <EditForm Model="@quizForm" OnValidSubmit="SaveQuiz">
+                            <DataAnnotationsValidator />
+                            <div class="form-group">
+                                <label>Titre</label>
+                                <InputText @bind-Value="quizForm.Title" class="input-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <InputTextArea @bind-Value="quizForm.Description" class="input-control" rows="3" />
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                <button type="button" class="btn btn-outline" @onclick="CancelQuizForm">Annuler</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                }
+
+                @if (quizzes.Any())
+                {
+                    @foreach (var quiz in quizzes)
+                    {
+                        <div class="quiz-section">
+                            <div class="quiz-header">
+                                <h4>@quiz.Title</h4>
+                                <div>
+                                    <button class="btn btn-sm btn-outline" @onclick="() => ShowEditQuizForm(quiz)">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteQuiz(quiz.Id)">
+                                        <i class="bi bi-trash"></i> Supprimer
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" @onclick="() => ToggleQuestions(quiz.Id)">
+                                        <i class="bi bi-question-circle"></i> Gérer les questions
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (selectedQuizId == quiz.Id)
+                            {
+                                <div class="questions-section">
+                                    @if (showQuestionForm)
+                                    {
+                                        <div class="form-section">
+                                            <h5>@(editingQuestion == null ? "Nouvelle" : "Modifier") Question</h5>
+                                            <EditForm Model="@questionForm" OnValidSubmit="SaveQuestion">
+                                                <DataAnnotationsValidator />
+                                                <div class="form-group">
+                                                    <label>Question</label>
+                                                    <InputTextArea @bind-Value="questionForm.QuestionText" class="input-control" rows="2" />
+                                                </div>
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Option A</label>
+                                                        <InputText @bind-Value="questionForm.OptionA" class="input-control" />
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Option B</label>
+                                                        <InputText @bind-Value="questionForm.OptionB" class="input-control" />
+                                                    </div>
+                                                </div>
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label>Option C</label>
+                                                        <InputText @bind-Value="questionForm.OptionC" class="input-control" />
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Option D</label>
+                                                        <InputText @bind-Value="questionForm.OptionD" class="input-control" />
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Réponse correcte</label>
+                                                    <InputSelect @bind-Value="questionForm.CorrectAnswer" class="input-control">
+                                                        <option value="A">A</option>
+                                                        <option value="B">B</option>
+                                                        <option value="C">C</option>
+                                                        <option value="D">D</option>
+                                                    </InputSelect>
+                                                </div>
+                                                <div class="form-actions">
+                                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                                    <button type="button" class="btn btn-outline" @onclick="CancelQuestionForm">Annuler</button>
+                                                </div>
+                                            </EditForm>
+                                        </div>
+                                    }
+
+                                    <button class="btn btn-sm btn-primary mb-2" @onclick="ShowAddQuestionForm">
+                                        <i class="bi bi-plus"></i> Ajouter une question
+                                    </button>
+
+                                    @if (questions.Any())
+                                    {
+                                        <div class="list-group">
+                                            @foreach (var question in questions)
+                                            {
+                                                <div class="list-item">
+                                                    <div>
+                                                        <strong>@question.QuestionText</strong>
+                                                        <div class="text-sm">Réponse: <strong>@question.CorrectAnswer</strong></div>
+                                                    </div>
+                                                    <div class="item-actions">
+                                                        <button class="btn btn-sm btn-outline" @onclick="() => ShowEditQuestionForm(question)">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteQuestion(question.Id)">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted">Aucune question.</p>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted">Aucun quiz. Ajoutez-en un pour commencer.</p>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private CourseDetailsDto? course;
+    private List<LessonDto> lessons = new();
+    private List<QuizDto> quizzes = new();
+    private List<QuizQuestionDto> questions = new();
+
+    private bool isLoading = true;
+    private bool showLessonForm, showQuizForm, showQuestionForm;
+    private LessonDto? editingLesson;
+    private QuizDto? editingQuiz;
+    private QuizQuestionDto? editingQuestion;
+    private int? selectedQuizId;
+
+    private CreateLessonDto lessonForm = new();
+    private CreateQuizDto quizForm = new();
+    private CreateQuizQuestionDto questionForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null || currentUser.Role != "Instructor")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        course = await CoursesClient.GetCourseByIdAsync(CourseId);
+        
+        if (course == null || course.InstructorId != currentUser.Id)
+        {
+            Navigation.NavigateTo("/instructor/courses");
+            return;
+        }
+
+        await LoadData();
+        isLoading = false;
+    }
+
+    private async Task LoadData()
+    {
+        lessons = await LessonsClient.GetLessonsAsync(CourseId);
+        quizzes = await QuizzesClient.GetQuizzesAsync(CourseId);
+    }
+
+    // LESSON METHODS
+    private void ShowAddLessonForm()
+    {
+        editingLesson = null;
+        lessonForm = new CreateLessonDto { CourseId = CourseId, OrderNumber = lessons.Count + 1 };
+        showLessonForm = true;
+    }
+
+    private void ShowEditLessonForm(LessonDto lesson)
+    {
+        editingLesson = lesson;
+        lessonForm = new CreateLessonDto
+        {
+            CourseId = CourseId,
+            Title = lesson.Title,
+            VideoUrl = lesson.VideoUrl,
+            DurationMinutes = lesson.DurationMinutes,
+            OrderNumber = lesson.OrderNumber
+        };
+        showLessonForm = true;
+    }
+
+    private async Task SaveLesson()
+    {
+        if (editingLesson == null)
+        {
+            await LessonsClient.CreateLessonAsync(lessonForm);
+        }
+        else
+        {
+            var updateDto = new UpdateLessonDto
+            {
+                Title = lessonForm.Title,
+                VideoUrl = lessonForm.VideoUrl,
+                DurationMinutes = lessonForm.DurationMinutes,
+                OrderNumber = lessonForm.OrderNumber
+            };
+            await LessonsClient.UpdateLessonAsync(editingLesson.Id, updateDto);
+        }
+        
+        await LoadData();
+        CancelLessonForm();
+    }
+
+    private void CancelLessonForm()
+    {
+        showLessonForm = false;
+        editingLesson = null;
+    }
+
+    private async Task DeleteLesson(int id)
+    {
+        await LessonsClient.DeleteLessonAsync(id);
+        await LoadData();
+    }
+
+    // QUIZ METHODS
+    private void ShowAddQuizForm()
+    {
+        editingQuiz = null;
+        quizForm = new CreateQuizDto { CourseId = CourseId };
+        showQuizForm = true;
+    }
+
+    private void ShowEditQuizForm(QuizDto quiz)
+    {
+        editingQuiz = quiz;
+        quizForm = new CreateQuizDto
+        {
+            CourseId = CourseId,
+            Title = quiz.Title,
+            Description = quiz.Description
+        };
+        showQuizForm = true;
+    }
+
+    private async Task SaveQuiz()
+    {
+        if (editingQuiz == null)
+        {
+            await QuizzesClient.CreateQuizAsync(quizForm);
+        }
+        else
+        {
+            var updateDto = new UpdateQuizDto
+            {
+                Title = quizForm.Title,
+                Description = quizForm.Description
+            };
+            await QuizzesClient.UpdateQuizAsync(editingQuiz.Id, updateDto);
+        }
+        
+        await LoadData();
+        CancelQuizForm();
+    }
+
+    private void CancelQuizForm()
+    {
+        showQuizForm = false;
+        editingQuiz = null;
+    }
+
+    private async Task DeleteQuiz(int id)
+    {
+        await QuizzesClient.DeleteQuizAsync(id);
+        await LoadData();
+        if (selectedQuizId == id) selectedQuizId = null;
+    }
+
+    // QUESTION METHODS
+    private async Task ToggleQuestions(int quizId)
+    {
+        if (selectedQuizId == quizId)
+        {
+            selectedQuizId = null;
+            questions.Clear();
+        }
+        else
+        {
+            selectedQuizId = quizId;
+            questions = await QuestionsClient.GetQuestionsAsync(quizId);
+        }
+    }
+
+    private void ShowAddQuestionForm()
+    {
+        editingQuestion = null;
+        questionForm = new CreateQuizQuestionDto { QuizId = selectedQuizId ?? 0 };
+        showQuestionForm = true;
+    }
+
+    private void ShowEditQuestionForm(QuizQuestionDto question)
+    {
+        editingQuestion = question;
+        questionForm = new CreateQuizQuestionDto
+        {
+            QuizId = selectedQuizId ?? 0,
+            QuestionText = question.QuestionText,
+            OptionA = question.OptionA,
+            OptionB = question.OptionB,
+            OptionC = question.OptionC,
+            OptionD = question.OptionD,
+            CorrectAnswer = question.CorrectAnswer
+        };
+        showQuestionForm = true;
+    }
+
+    private async Task SaveQuestion()
+    {
+        if (editingQuestion == null)
+        {
+            await QuestionsClient.CreateQuestionAsync(questionForm);
+        }
+        else
+        {
+            var updateDto = new UpdateQuizQuestionDto
+            {
+                QuestionText = questionForm.QuestionText,
+                OptionA = questionForm.OptionA,
+                OptionB = questionForm.OptionB,
+                OptionC = questionForm.OptionC,
+                OptionD = questionForm.OptionD,
+                CorrectAnswer = questionForm.CorrectAnswer
+            };
+            await QuestionsClient.UpdateQuestionAsync(editingQuestion.Id, updateDto);
+        }
+        
+        if (selectedQuizId.HasValue)
+            questions = await QuestionsClient.GetQuestionsAsync(selectedQuizId.Value);
+        
+        CancelQuestionForm();
+    }
+
+    private void CancelQuestionForm()
+    {
+        showQuestionForm = false;
+        editingQuestion = null;
+    }
+
+    private async Task DeleteQuestion(int id)
+    {
+        await QuestionsClient.DeleteQuestionAsync(id);
+        if (selectedQuizId.HasValue)
+            questions = await QuestionsClient.GetQuestionsAsync(selectedQuizId.Value);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/instructor/courses");
+    }
+}

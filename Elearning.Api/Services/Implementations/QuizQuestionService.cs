@@ -10,12 +10,18 @@ public class QuizQuestionService : IQuizQuestionService
 {
     private readonly IQuizQuestionRepository _questionRepository;
     private readonly IQuizRepository _quizRepository;
+    private readonly ICourseRepository _courseRepository;
     private readonly IMapper _mapper;
 
-    public QuizQuestionService(IQuizQuestionRepository questionRepository, IQuizRepository quizRepository, IMapper mapper)
+    public QuizQuestionService(
+        IQuizQuestionRepository questionRepository, 
+        IQuizRepository quizRepository,
+        ICourseRepository courseRepository,
+        IMapper mapper)
     {
         _questionRepository = questionRepository;
         _quizRepository = quizRepository;
+        _courseRepository = courseRepository;
         _mapper = mapper;
     }
 
@@ -69,6 +75,23 @@ public class QuizQuestionService : IQuizQuestionService
         {
             return false;
         }
+    }
+
+    public async Task<bool> VerifyInstructorOwnership(int questionId, int instructorId)
+    {
+        var question = await _questionRepository.GetByIdAsync(questionId);
+        if (question == null)
+            return false;
+
+        var quiz = await _quizRepository.GetByIdAsync(question.QuizId);
+        if (quiz == null)
+            return false;
+
+        var course = await _courseRepository.GetByIdAsync(quiz.CourseId);
+        if (course == null)
+            return false;
+
+        return course.InstructorId == instructorId;
     }
 
     private async Task EnsureQuizExists(int quizId)

@@ -1,5 +1,6 @@
 using Elearning.Api.Dtos;
 using Elearning.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Elearning.Api.Controllers;
@@ -16,6 +17,7 @@ public class CourseCategoriesController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<CourseCategoryDto>>> GetCategories()
     {
         var categories = await _categoryService.GetAllAsync();
@@ -23,6 +25,7 @@ public class CourseCategoriesController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<CourseCategoryDto>> GetCategory(int id)
     {
         var category = await _categoryService.GetByIdAsync(id);
@@ -33,6 +36,7 @@ public class CourseCategoriesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<CourseCategoryDto>> CreateCategory([FromBody] CreateCourseCategoryDto dto)
     {
         if (!ModelState.IsValid)
@@ -43,6 +47,7 @@ public class CourseCategoriesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateCategory(int id, [FromBody] UpdateCourseCategoryDto dto)
     {
         if (!ModelState.IsValid)
@@ -53,6 +58,7 @@ public class CourseCategoriesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteCategory(int id)
     {
         var deleted = await _categoryService.DeleteAsync(id);

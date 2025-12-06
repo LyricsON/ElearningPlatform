@@ -1,0 +1,210 @@
+@page "/admin/courses"
+@using Elearning.Blazor.Models
+@using Elearning.Blazor.Services
+@inject ICoursesApiClient CoursesClient
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Gestion des cours</PageTitle>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Gestion des cours</h1>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-spinner">Chargement...</div>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">@successMessage</div>
+        }
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        <div class="card">
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Titre</th>
+                            <th>Instructeur</th>
+                            <th>Catégorie</th>
+                            <th>Niveau</th>
+                            <th>Date de création</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var course in courses)
+                        {
+                            <tr>
+                                <td>@course.Id</td>
+                                <td>
+                                    <strong>@course.Title</strong>
+                                    @if (!string.IsNullOrEmpty(course.Description))
+                                    {
+                                        <br />
+                                        <small class="text-muted">@GetTruncatedDescription(course.Description)</small>
+                                    }
+                                </td>
+                                <td>@course.InstructorName</td>
+                                <td>@(course.CategoryName ?? "N/A")</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(course.DifficultyLevel))
+                                    {
+                                        <span class="badge">@GetDifficultyLabel(course.DifficultyLevel)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                                <td>@course.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline" @onclick="() => ViewCourse(course.Id)">
+                                        <i class="bi bi-eye"></i> Voir
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(course)">
+                                        <i class="bi bi-trash"></i> Supprimer
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (!courses.Any())
+                {
+                    <p class="text-muted text-center">Aucun cours trouvé.</p>
+                }
+            </div>
+        </div>
+    }
+
+    @if (courseToDelete != null)
+    {
+        <div class="modal-overlay" @onclick="CancelDelete">
+            <div class="modal-dialog" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h3>Confirmer la suppression</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer le cours <strong>@courseToDelete.Title</strong> ?</p>
+                    <p class="text-muted">Instructeur: @courseToDelete.InstructorName</p>
+                    <p class="text-warning">Cette action est irréversible et supprimera également toutes les leçons, quiz et résultats associés.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @onclick="CancelDelete">Annuler</button>
+                    <button class="btn btn-danger" @onclick="DeleteCourse" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span>Suppression...</span>
+                        }
+                        else
+                        {
+                            <span>Supprimer</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CourseDto> courses = new();
+    private bool isLoading = true;
+    private CourseDto? courseToDelete;
+    private bool isDeleting = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null || currentUser.Role != "Admin")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        await LoadCourses();
+    }
+
+    private async Task LoadCourses()
+    {
+        isLoading = true;
+        courses = await CoursesClient.GetCoursesAsync();
+        isLoading = false;
+    }
+
+    private void ViewCourse(int courseId)
+    {
+        Navigation.NavigateTo($"/courses/{courseId}");
+    }
+
+    private void ConfirmDelete(CourseDto course)
+    {
+        courseToDelete = course;
+        ClearMessages();
+    }
+
+    private void CancelDelete()
+    {
+        courseToDelete = null;
+    }
+
+    private async Task DeleteCourse()
+    {
+        if (courseToDelete == null) return;
+
+        isDeleting = true;
+        ClearMessages();
+        var success = await CoursesClient.DeleteCourseAsync(courseToDelete.Id);
+        
+        if (success)
+        {
+            courses.Remove(courseToDelete);
+            successMessage = "Cours supprimé avec succès.";
+            courseToDelete = null;
+        }
+        else
+        {
+            errorMessage = "Échec de la suppression du cours.";
+        }
+        
+        isDeleting = false;
+        StateHasChanged();
+    }
+
+    private void ClearMessages()
+    {
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private string GetTruncatedDescription(string description)
+    {
+        if (string.IsNullOrEmpty(description)) return string.Empty;
+        return description.Length > 100 ? description.Substring(0, 100) + "..." : description;
+    }
+
+    private string GetDifficultyLabel(string level)
+    {
+        return level switch
+        {
+            "Beginner" => "Débutant",
+            "Intermediate" => "Intermédiaire",
+            "Advanced" => "Avancé",
+            _ => level
+        };
+    }
+}

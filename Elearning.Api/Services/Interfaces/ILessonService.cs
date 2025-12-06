@@ -10,4 +10,5 @@ public interface ILessonService
     Task<LessonDto> CreateAsync(CreateLessonDto dto);
     Task<bool> UpdateAsync(int id, UpdateLessonDto dto);
     Task<bool> DeleteAsync(int id);
+    Task<bool> VerifyInstructorOwnership(int lessonId, int instructorId);
 }

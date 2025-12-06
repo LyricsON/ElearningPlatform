@@ -28,6 +28,7 @@ public class CreateUserDto
     public string? Password { get; set; }
 
     [Required, MaxLength(50)]
+    [RegularExpression("Student|Instructor|Admin", ErrorMessage = "Role must be Student, Instructor, or Admin.")]
     public string Role { get; set; } = "Student";
 }
 
@@ -46,5 +47,6 @@ public class UpdateUserDto
     public string? Password { get; set; }
 
     [Required, MaxLength(50)]
+    [RegularExpression("Student|Instructor|Admin", ErrorMessage = "Role must be Student, Instructor, or Admin.")]
     public string Role { get; set; } = "Student";
 }

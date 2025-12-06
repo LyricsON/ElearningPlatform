@@ -10,4 +10,5 @@ public interface IQuizService
     Task<QuizDto> CreateAsync(CreateQuizDto dto);
     Task<bool> UpdateAsync(int id, UpdateQuizDto dto);
     Task<bool> DeleteAsync(int id);
+    Task<bool> VerifyInstructorOwnership(int quizId, int instructorId);
 }

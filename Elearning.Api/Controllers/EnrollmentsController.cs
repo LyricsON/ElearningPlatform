@@ -1,6 +1,8 @@
 using Elearning.Api.Dtos;
 using Elearning.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Elearning.Api.Controllers;
 
@@ -16,10 +18,21 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<IEnumerable<EnrollmentDto>>> GetEnrollments(
         [FromQuery] int? userId,
         [FromQuery] int? courseId)
     {
+        var currentUserId = GetCurrentUserId();
+        var isAdmin = User.IsInRole("Admin");
+        var isInstructor = User.IsInRole("Instructor");
+
+        if (!isAdmin && !isInstructor)
+        {
+            // Students can only view their own enrollments
+            userId = currentUserId;
+        }
+
         IEnumerable<EnrollmentDto> enrollments;
 
         if (userId.HasValue)
@@ -33,6 +46,7 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<EnrollmentDto>> GetEnrollment(int id)
     {
         var enrollment = await _enrollmentService.GetByIdAsync(id);
@@ -43,10 +57,22 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<EnrollmentDto>> CreateEnrollment([FromBody] CreateEnrollmentDto dto)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        var currentUserId = GetCurrentUserId();
+        var isAdmin = User.IsInRole("Admin");
+        var isInstructor = User.IsInRole("Instructor");
+
+        if (!isAdmin && !isInstructor)
+        {
+            if (currentUserId == null)
+                return Forbid();
+            dto.UserId = currentUserId.Value;
+        }
 
         try
         {
@@ -60,10 +86,24 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<IActionResult> UpdateEnrollment(int id, [FromBody] UpdateEnrollmentDto dto)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        var currentUserId = GetCurrentUserId();
+        var isAdmin = User.IsInRole("Admin");
+        var isInstructor = User.IsInRole("Instructor");
+        if (!isAdmin && !isInstructor)
+        {
+            var existing = await _enrollmentService.GetByIdAsync(id);
+            if (existing == null)
+                return NotFound();
+
+            if (currentUserId == null || existing.UserId != currentUserId.Value)
+                return Forbid();
+        }
 
         try
         {
@@ -80,9 +120,16 @@ public class EnrollmentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteEnrollment(int id)
     {
         var deleted = await _enrollmentService.DeleteAsync(id);
         return deleted ? NoContent() : NotFound();
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(idClaim, out var id) ? id : null;
     }
 }

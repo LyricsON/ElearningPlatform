@@ -75,6 +75,10 @@ public class CourseService : ICourseService
         if (course == null)
             return false;
 
+        // Verify instructor ownership (instructors can only update their own courses)
+        if (course.InstructorId != dto.InstructorId)
+            throw new InvalidOperationException("You can only update your own courses.");
+
         await EnsureInstructorExists(dto.InstructorId);
         if (dto.CategoryId.HasValue)
             await EnsureCategoryExists(dto.CategoryId.Value);
@@ -99,11 +103,25 @@ public class CourseService : ICourseService
         }
     }
 
+    public async Task<bool> VerifyInstructorOwnership(int courseId, int instructorId)
+    {
+        var course = await _courseRepository.GetByIdAsync(courseId);
+        if (course == null)
+            return false;
+
+        return course.InstructorId == instructorId;
+    }
+
     private async Task EnsureInstructorExists(int instructorId)
     {
         var instructor = await _userRepository.GetByIdAsync(instructorId);
         if (instructor == null)
             throw new InvalidOperationException($"Instructor with id {instructorId} does not exist.");
+
+        var role = instructor.Role?.Trim();
+        if (!string.Equals(role, "Instructor", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Only users with Instructor or Admin role can create or manage courses.");
     }
 
     private async Task EnsureCategoryExists(int categoryId)

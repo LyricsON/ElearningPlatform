@@ -1,11 +1,13 @@
 using Elearning.Api.Dtos;
 using Elearning.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Elearning.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin")]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -62,6 +64,27 @@ public class UsersController : ControllerBase
         try
         {
             var updated = await _userService.UpdateAsync(id, dto);
+            if (!updated)
+                return NotFound();
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    // PUT: api/users/5/role
+    [HttpPut("{id:int}/role")]
+    public async Task<IActionResult> UpdateUserRole(int id, [FromBody] UpdateUserRoleDto dto)
+    {
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        try
+        {
+            var updated = await _userService.UpdateRoleAsync(id, dto.Role);
             if (!updated)
                 return NotFound();
 

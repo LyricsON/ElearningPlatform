@@ -12,4 +12,5 @@ public interface ICourseService
     Task<CourseDto> CreateAsync(CreateCourseDto dto);
     Task<bool> UpdateAsync(int id, UpdateCourseDto dto);
     Task<bool> DeleteAsync(int id);
+    Task<bool> VerifyInstructorOwnership(int courseId, int instructorId);
 }

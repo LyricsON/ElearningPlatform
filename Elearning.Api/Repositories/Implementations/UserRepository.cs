@@ -30,9 +30,11 @@ public class UserRepository : IUserRepository
 
     public async Task<AppUser?> GetByEmailAsync(string email)
     {
+        var normalized = email.Trim().ToLowerInvariant();
+
         return await _context.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email == email);
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == normalized);
     }
 
     public async Task<AppUser> CreateAsync(AppUser user)

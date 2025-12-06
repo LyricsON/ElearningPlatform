@@ -1,0 +1,249 @@
+@page "/admin/users"
+@using Elearning.Blazor.Models
+@using Elearning.Blazor.Services
+@inject IUsersApiClient UsersClient
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Gestion des utilisateurs</PageTitle>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Gestion des utilisateurs</h1>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-spinner">Chargement...</div>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">@successMessage</div>
+        }
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        <div class="card">
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom complet</th>
+                            <th>Email</th>
+                            <th>Rôle actuel</th>
+                            <th>Date de création</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in users)
+                        {
+                            <tr>
+                                <td>@user.Id</td>
+                                <td>@user.FirstName @user.LastName</td>
+                                <td>@user.Email</td>
+                                <td>
+                                    @if (editingUserId == user.Id)
+                                    {
+                                        <select class="input-control" @bind="selectedRole">
+                                            <option value="Student">Étudiant</option>
+                                            <option value="Instructor">Instructeur</option>
+                                            <option value="Admin">Administrateur</option>
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-@GetRoleClass(user.Role)">@GetRoleLabel(user.Role)</span>
+                                    }
+                                </td>
+                                <td>@user.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    @if (editingUserId == user.Id)
+                                    {
+                                        <button class="btn btn-sm btn-primary" @onclick="() => SaveRole(user.Id)">
+                                            Enregistrer
+                                        </button>
+                                        <button class="btn btn-sm btn-outline" @onclick="CancelEdit">
+                                            Annuler
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline" @onclick="() => StartEditRole(user)">
+                                            <i class="bi bi-pencil"></i> Modifier rôle
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(user)">
+                                            <i class="bi bi-trash"></i> Supprimer
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (!users.Any())
+                {
+                    <p class="text-muted text-center">Aucun utilisateur trouvé.</p>
+                }
+            </div>
+        </div>
+    }
+
+    @if (userToDelete != null)
+    {
+        <div class="modal-overlay" @onclick="CancelDelete">
+            <div class="modal-dialog" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h3>Confirmer la suppression</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>@userToDelete.FirstName @userToDelete.LastName</strong> ?</p>
+                    <p class="text-warning">Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @onclick="CancelDelete">Annuler</button>
+                    <button class="btn btn-danger" @onclick="DeleteUser" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span>Suppression...</span>
+                        }
+                        else
+                        {
+                            <span>Supprimer</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<UserDto> users = new();
+    private bool isLoading = true;
+    private int? editingUserId;
+    private string selectedRole = "Student";
+    private UserDto? userToDelete;
+    private bool isDeleting = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null || currentUser.Role != "Admin")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        isLoading = true;
+        users = await UsersClient.GetUsersAsync();
+        isLoading = false;
+    }
+
+    private void StartEditRole(UserDto user)
+    {
+        editingUserId = user.Id;
+        selectedRole = user.Role;
+        ClearMessages();
+    }
+
+    private void CancelEdit()
+    {
+        editingUserId = null;
+    }
+
+    private async Task SaveRole(int userId)
+    {
+        ClearMessages();
+        var success = await UsersClient.UpdateUserRoleAsync(userId, selectedRole);
+        
+        if (success)
+        {
+            successMessage = "Rôle mis à jour avec succès.";
+            await LoadUsers();
+            editingUserId = null;
+        }
+        else
+        {
+            errorMessage = "Échec de la mise à jour du rôle.";
+        }
+
+        StateHasChanged();
+    }
+
+    private void ConfirmDelete(UserDto user)
+    {
+        userToDelete = user;
+        ClearMessages();
+    }
+
+    private void CancelDelete()
+    {
+        userToDelete = null;
+    }
+
+    private async Task DeleteUser()
+    {
+        if (userToDelete == null) return;
+
+        isDeleting = true;
+        ClearMessages();
+        var success = await UsersClient.DeleteUserAsync(userToDelete.Id);
+        
+        if (success)
+        {
+            users.Remove(userToDelete);
+            successMessage = "Utilisateur supprimé avec succès.";
+            userToDelete = null;
+        }
+        else
+        {
+            errorMessage = "Échec de la suppression de l'utilisateur.";
+        }
+        
+        isDeleting = false;
+        StateHasChanged();
+    }
+
+    private void ClearMessages()
+    {
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private string GetRoleLabel(string role)
+    {
+        return role switch
+        {
+            "Student" => "Étudiant",
+            "Instructor" => "Instructeur",
+            "Admin" => "Administrateur",
+            _ => role
+        };
+    }
+
+    private string GetRoleClass(string role)
+    {
+        return role switch
+        {
+            "Admin" => "danger",
+            "Instructor" => "primary",
+            "Student" => "secondary",
+            _ => "secondary"
+        };
+    }
+}

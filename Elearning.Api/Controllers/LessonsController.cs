@@ -1,6 +1,8 @@
 using Elearning.Api.Dtos;
 using Elearning.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Elearning.Api.Controllers;
 
@@ -9,13 +11,16 @@ namespace Elearning.Api.Controllers;
 public class LessonsController : ControllerBase
 {
     private readonly ILessonService _lessonService;
+    private readonly ICourseService _courseService;
 
-    public LessonsController(ILessonService lessonService)
+    public LessonsController(ILessonService lessonService, ICourseService courseService)
     {
         _lessonService = lessonService;
+        _courseService = courseService;
     }
 
     [HttpGet]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<IEnumerable<LessonDto>>> GetLessons([FromQuery] int? courseId)
     {
         var lessons = courseId.HasValue
@@ -26,6 +31,7 @@ public class LessonsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Roles = "Student,Instructor,Admin")]
     public async Task<ActionResult<LessonDto>> GetLesson(int id)
     {
         var lesson = await _lessonService.GetByIdAsync(id);
@@ -36,10 +42,15 @@ public class LessonsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<ActionResult<LessonDto>> CreateLesson([FromBody] CreateLessonDto dto)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        var check = await AuthorizeCourseOwnerAsync(dto.CourseId);
+        if (check != null)
+            return check;
 
         try
         {
@@ -53,19 +64,59 @@ public class LessonsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<IActionResult> UpdateLesson(int id, [FromBody] UpdateLessonDto dto)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        var lesson = await _lessonService.GetByIdAsync(id);
+        if (lesson == null)
+            return NotFound();
+
+        var check = await AuthorizeCourseOwnerAsync(lesson.CourseId);
+        if (check != null)
+            return check;
 
         var updated = await _lessonService.UpdateAsync(id, dto);
         return updated ? NoContent() : NotFound();
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<IActionResult> DeleteLesson(int id)
     {
+        var lesson = await _lessonService.GetByIdAsync(id);
+        if (lesson == null)
+            return NotFound();
+
+        var check = await AuthorizeCourseOwnerAsync(lesson.CourseId);
+        if (check != null)
+            return check;
+
         var deleted = await _lessonService.DeleteAsync(id);
         return deleted ? NoContent() : NotFound();
+    }
+
+    private async Task<ActionResult?> AuthorizeCourseOwnerAsync(int courseId)
+    {
+        var course = await _courseService.GetDetailsAsync(courseId);
+        if (course == null)
+            return NotFound($"Course {courseId} not found.");
+
+        if (User.IsInRole("Admin"))
+            return new EmptyResult();
+
+        var userId = GetCurrentUserId();
+        if (userId == null || course.InstructorId != userId.Value)
+            return Forbid();
+
+        return null;
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(idClaim, out var id) ? id : null;
     }
 }

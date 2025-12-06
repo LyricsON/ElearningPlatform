@@ -1,6 +1,8 @@
 using Elearning.Api.Dtos;
 using Elearning.Api.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Elearning.Api.Controllers;
 
@@ -17,6 +19,7 @@ public class CoursesController : ControllerBase
 
     // GET: api/courses?categoryId=1&instructorId=2
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<CourseDto>>> GetCourses(
         [FromQuery] int? categoryId,
         [FromQuery] int? instructorId)
@@ -41,6 +44,7 @@ public class CoursesController : ControllerBase
 
     // GET: api/courses/5
     [HttpGet("{id:int}")]
+    [AllowAnonymous]
     public async Task<ActionResult<CourseDetailsDto>> GetCourse(int id)
     {
         var course = await _courseService.GetDetailsAsync(id);
@@ -52,10 +56,20 @@ public class CoursesController : ControllerBase
 
     // POST: api/courses
     [HttpPost]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<ActionResult<CourseDto>> CreateCourse([FromBody] CreateCourseDto dto)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null && !User.IsInRole("Admin"))
+            return Forbid();
+
+        if (!User.IsInRole("Admin"))
+        {
+            dto.InstructorId = currentUserId!.Value;
+        }
 
         try
         {
@@ -70,10 +84,30 @@ public class CoursesController : ControllerBase
 
     // PUT: api/courses/5
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<IActionResult> UpdateCourse(int id, [FromBody] UpdateCourseDto dto)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
+
+        var existing = await _courseService.GetDetailsAsync(id);
+        if (existing == null)
+            return NotFound();
+
+        var currentUserId = GetCurrentUserId();
+        var isAdmin = User.IsInRole("Admin");
+        if (!isAdmin && (currentUserId == null || existing.InstructorId != currentUserId.Value))
+            return Forbid();
+
+        // Prevent instructor hijack; only admin can change instructor
+        if (!isAdmin)
+        {
+            dto.InstructorId = existing.InstructorId;
+        }
+        else if (dto.InstructorId == 0)
+        {
+            dto.InstructorId = existing.InstructorId;
+        }
 
         try
         {
@@ -91,9 +125,24 @@ public class CoursesController : ControllerBase
 
     // DELETE: api/courses/5
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<IActionResult> DeleteCourse(int id)
     {
+        var existing = await _courseService.GetDetailsAsync(id);
+        if (existing == null)
+            return NotFound();
+
+        var currentUserId = GetCurrentUserId();
+        if (!User.IsInRole("Admin") && (currentUserId == null || existing.InstructorId != currentUserId.Value))
+            return Forbid();
+
         var deleted = await _courseService.DeleteAsync(id);
         return deleted ? NoContent() : NotFound();
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(idClaim, out var id) ? id : null;
     }
 }
