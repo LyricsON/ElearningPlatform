@@ -35,7 +35,7 @@
                 @if (showMenu)
                 {
                     <div class="user-dropdown">
-                        @if (currentUser?.Role == "Student")
+                        @if (currentUser?.Role == "Student" || currentUser?.Role == "Instructor")
                         {
                             <a @onclick="@(() => GoTo("/my-courses"))"><i class="bi bi-journal-text"></i> My courses</a>
                             <a @onclick="@(() => GoTo("/my-results"))"><i class="bi bi-bar-chart"></i> Results</a>
@@ -67,7 +67,7 @@
     
     @if (isAuthenticated)
     {
-        @if (currentUser?.Role == "Student" || currentUser?.Role == "Admin")
+        @if (currentUser?.Role == "Student" || currentUser?.Role == "Admin" || currentUser?.Role == "Instructor")
         {
             <NavLink class="nav-pill" href="/my-courses"><i class="bi bi-journal-text"></i> My courses</NavLink>
             <NavLink class="nav-pill" href="/my-results"><i class="bi bi-bar-chart"></i> Results</NavLink>

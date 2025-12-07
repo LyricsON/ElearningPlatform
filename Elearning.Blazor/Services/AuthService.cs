@@ -36,7 +36,7 @@ public class AuthService : IAuthService
 
     public CurrentUserDto? CurrentUser => _authStateProvider.CurrentUser;
     public bool IsAuthenticated => _authStateProvider.CurrentUser != null;
-    public bool IsStudent => CurrentUser?.Role == "Student" || CurrentUser?.Role == "Admin";
+    public bool IsStudent => CurrentUser?.Role == "Student" || CurrentUser?.Role == "Admin" || CurrentUser?.Role == "Instructor";
     public bool IsInstructor => CurrentUser?.Role == "Instructor" || CurrentUser?.Role == "Admin";
     public bool IsAdmin => CurrentUser?.Role == "Admin";
 
