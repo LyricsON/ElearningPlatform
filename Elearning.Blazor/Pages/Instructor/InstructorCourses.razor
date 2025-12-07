@@ -76,8 +76,8 @@
 
     @if (courseToDelete != null)
     {
-        <div class="modal-overlay" @onclick="CancelDelete">
-            <div class="modal-dialog" @onclick:stopPropagation="true">
+        <div class="confirm-backdrop" @onclick="CancelDelete">
+            <div class="confirm-dialog" @onclick:stopPropagation="true">
                 <div class="modal-header">
                     <h3>Confirmer la suppression</h3>
                 </div>
@@ -85,7 +85,7 @@
                     <p>Êtes-vous sûr de vouloir supprimer le cours <strong>@courseToDelete.Title</strong> ?</p>
                     <p class="text-warning">Cette action est irréversible.</p>
                 </div>
-                <div class="modal-footer">
+                <div class="confirm-actions">
                     <button class="btn btn-outline" @onclick="CancelDelete">Annuler</button>
                     <button class="btn btn-danger" @onclick="DeleteCourse" disabled="@isDeleting">
                         @if (isDeleting)
@@ -140,7 +140,7 @@
 
     private void NavigateToEdit(int courseId)
     {
-        Navigation.NavigateTo($"/instructor/edit/{courseId}");
+        Navigation.NavigateTo($"/instructor/edit-course/{courseId}");
     }
 
     private void ConfirmDelete(CourseDto course)

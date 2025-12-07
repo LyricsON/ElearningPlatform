@@ -1,4 +1,4 @@
-@page "/instructor/edit/{CourseId:int}"
+@page "/instructor/edit-course/{CourseId:int}"
 @using Elearning.Blazor.Models
 @using Elearning.Blazor.Services
 @inject ICoursesApiClient CoursesClient
@@ -21,7 +21,7 @@
     {
         <div class="card">
             <div class="card-header">
-                <h2>Modifier le cours</h2>
+                <h2>Modifier le cours #@CourseId</h2>
             </div>
             <div class="card-body">
                 <EditForm Model="@course" OnValidSubmit="HandleSubmit">
@@ -102,7 +102,7 @@
     protected override async Task OnInitializedAsync()
     {
         var currentUser = await AuthService.GetCurrentUserAsync();
-        if (currentUser == null || currentUser.Role != "Instructor")
+        if (currentUser == null || (currentUser.Role != "Instructor" && currentUser.Role != "Admin"))
         {
             Navigation.NavigateTo("/");
             return;
@@ -114,8 +114,8 @@
         var existingCourse = await CoursesClient.GetCourseByIdAsync(CourseId);
         if (existingCourse != null)
         {
-            // Verify ownership
-            if (existingCourse.InstructorId != instructorId)
+            // Verify ownership or Admin role
+            if (existingCourse.InstructorId != instructorId && currentUser.Role != "Admin")
             {
                 Navigation.NavigateTo("/instructor/courses");
                 return;
@@ -128,7 +128,7 @@
                 CategoryId = existingCourse.CategoryId,
                 ThumbnailUrl = existingCourse.ThumbnailUrl,
                 DifficultyLevel = existingCourse.DifficultyLevel,
-                InstructorId = instructorId
+                InstructorId = existingCourse.InstructorId
             };
         }
 

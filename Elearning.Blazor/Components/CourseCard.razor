@@ -1,6 +1,6 @@
 <div class="card course-card">
     <div class="course-card__header">
-        <span class="badge">@Course.CategoryName ?? "Uncategorized"</span>
+        <span class="badge">@(Course.CategoryName ?? "Uncategorized")</span>
         <span class="muted">Instructor: @(!string.IsNullOrWhiteSpace(Course.InstructorName) ? Course.InstructorName : $"ID #{Course.InstructorId}")</span>
     </div>
     <h5>@Course.Title</h5>

@@ -68,74 +68,77 @@
 
     @if (showDialog)
     {
-        <div class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;" @onclick="CloseDialog">
-            <div @onclick:stopPropagation="true" style="background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-width: 500px; width: 90%; max-height: 90vh; overflow: auto;">
-                <div style="padding: 1.5rem; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0; font-size: 1.25rem;">@dialogTitle</h3>
-                    <button @onclick="CloseDialog" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; padding: 0; width: 30px; height: 30px; line-height: 1;">&times;</button>
+        <div class="confirm-backdrop" @onclick="CloseDialog">
+            <div class="confirm-dialog" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h3>@dialogTitle</h3>
                 </div>
-                <div style="padding: 1.5rem;">
+                
+                <div class="modal-body">
                     @if (isDeleteMode)
                     {
                         <p>Êtes-vous sûr de vouloir supprimer la catégorie <strong>@selectedCategory?.Name</strong> ?</p>
-                        <p style="color: #ff9800;">⚠️ Cette action est irréversible.</p>
+                        <p class="text-warning">Cette action est irréversible.</p>
                     }
                     else
                     {
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nom de la catégorie *</label>
+                        <div class="form-group">
+                            <label>Nom de la catégorie *</label>
                             <input 
                                 type="text" 
+                                class="input-control"
                                 @bind="categoryName" 
                                 @bind:event="oninput"
                                 placeholder="Ex: Développement Web, Design, Marketing..." 
                                 required
-                                autofocus
-                                style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; box-sizing: border-box;" />
+                                autofocus />
                             @if (string.IsNullOrWhiteSpace(categoryName) && showValidation)
                             {
-                                <small style="color: #f44336; font-size: 0.875rem; display: block; margin-top: 0.25rem;">Le nom est requis</small>
+                                <div class="validation-message">Le nom est requis</div>
                             }
                         </div>
                     }
+
                     @if (!string.IsNullOrEmpty(dialogError))
                     {
-                        <div style="padding: 1rem; background: #ffebee; color: #c62828; border-radius: 4px; margin-top: 1rem;">
-                            ❌ @dialogError
+                        <div class="alert alert-danger mt-2">
+                            @dialogError
                         </div>
                     }
+                    
                     @if (!string.IsNullOrEmpty(successMessage))
                     {
-                        <div style="padding: 1rem; background: #e8f5e9; color: #2e7d32; border-radius: 4px; margin-top: 1rem;">
-                            ✅ @successMessage
+                        <div class="alert alert-success mt-2">
+                            @successMessage
                         </div>
                     }
                 </div>
-                <div style="padding: 1rem 1.5rem; border-top: 1px solid #e0e0e0; display: flex; gap: 0.5rem; justify-content: flex-end;">
-                    <button @onclick="CloseDialog" type="button" style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">Annuler</button>
+
+                <div class="confirm-actions">
+                    <button class="btn btn-outline" @onclick="CloseDialog">Annuler</button>
                     @if (isDeleteMode)
                     {
-                        <button @onclick="DeleteCategory" disabled="@isSubmitting" type="button" style="padding: 0.5rem 1rem; border: none; background: #f44336; color: white; border-radius: 4px; cursor: pointer;">
+                        <button class="btn btn-danger" @onclick="DeleteCategory" disabled="@isSubmitting">
                             @if (isSubmitting)
                             {
-                                <span>⏳ Suppression...</span>
+                                <span>Suppression...</span>
                             }
                             else
                             {
-                                <span>🗑️ Supprimer</span>
+                                <span>Supprimer</span>
                             }
                         </button>
                     }
                     else
                     {
-                        <button @onclick="SaveCategory" disabled="@isSubmitting" type="button" style="padding: 0.5rem 1rem; border: none; background: #2196F3; color: white; border-radius: 4px; cursor: pointer;">
+                        <button class="btn btn-primary" @onclick="SaveCategory" disabled="@isSubmitting">
                             @if (isSubmitting)
                             {
-                                <span>⏳ Enregistrement...</span>
+                                <span>Enregistrement...</span>
                             }
                             else
                             {
-                                <span>💾 Enregistrer</span>
+                                <span>Enregistrer</span>
                             }
                         </button>
                     }
