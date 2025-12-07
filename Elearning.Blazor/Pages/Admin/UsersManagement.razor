@@ -73,7 +73,7 @@
                                             Annuler
                                         </button>
                                     }
-                                    else
+                                    else if (user.Id != currentUserId)
                                     {
                                         <button class="btn btn-sm btn-outline" @onclick="() => StartEditRole(user)">
                                             <i class="bi bi-pencil"></i> Modifier rôle
@@ -81,6 +81,10 @@
                                         <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(user)">
                                             <i class="bi bi-trash"></i> Supprimer
                                         </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic">Action non autorisée (Vous)</span>
                                     }
                                 </td>
                             </tr>
@@ -134,6 +138,7 @@
     private bool isDeleting = false;
     private string? successMessage;
     private string? errorMessage;
+    private int currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -143,6 +148,7 @@
             Navigation.NavigateTo("/");
             return;
         }
+        currentUserId = currentUser.Id;
 
         await LoadUsers();
     }
