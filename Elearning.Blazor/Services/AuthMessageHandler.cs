@@ -13,10 +13,17 @@ public class AuthMessageHandler : DelegatingHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var token = _authService.GetToken();
-        if (!string.IsNullOrWhiteSpace(token))
+        var token = await _authService.GetTokenAsync();
+        Console.WriteLine($"[AuthMessageHandler] Processing request to: {request.RequestUri}");
+        
+        if (!string.IsNullOrEmpty(token))
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            Console.WriteLine($"[AuthMessageHandler] Attaching token: {token.Substring(0, Math.Min(10, token.Length))}...");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        }
+        else
+        {
+             Console.WriteLine("[AuthMessageHandler] No token found!");
         }
 
         return await base.SendAsync(request, cancellationToken);

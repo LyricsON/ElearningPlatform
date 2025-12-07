@@ -112,7 +112,7 @@
     protected override async Task OnInitializedAsync()
     {
         var currentUser = await AuthService.GetCurrentUserAsync();
-        if (currentUser == null || currentUser.Role != "Instructor")
+        if (currentUser == null || (currentUser.Role != "Instructor" && currentUser.Role != "Admin"))
         {
             Navigation.NavigateTo("/");
             return;

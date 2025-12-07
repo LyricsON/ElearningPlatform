@@ -30,14 +30,86 @@ builder.Services.AddScoped<AuthMessageHandler>();
 // Default HttpClient -> authenticated client
 builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("ApiClientAuth"));
-builder.Services.AddScoped<IUsersApiClient, UsersApiClient>();
-builder.Services.AddScoped<ICoursesApiClient, CoursesApiClient>();
-builder.Services.AddScoped<ICategoriesApiClient, CategoriesApiClient>();
-builder.Services.AddScoped<ILessonsApiClient, LessonsApiClient>();
-builder.Services.AddScoped<IEnrollmentsApiClient, EnrollmentsApiClient>();
-builder.Services.AddScoped<IQuizzesApiClient, QuizzesApiClient>();
-builder.Services.AddScoped<IQuizQuestionsApiClient, QuizQuestionsApiClient>();
-builder.Services.AddScoped<IQuizResultsApiClient, QuizResultsApiClient>();
+
+// Manual construction to ensure Scope sharing for Blazor Server
+builder.Services.AddScoped<IUsersApiClient>(sp => 
+{
+    var authService = sp.GetRequiredService<IAuthService>();
+    var handler = new AuthMessageHandler(authService);
+    handler.InnerHandler = new HttpClientHandler();
+    var httpClient = new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+    return new UsersApiClient(httpClient);
+});
+
+// Manual construction for CoursesApiClient to ensure auth
+builder.Services.AddScoped<ICoursesApiClient>(sp => 
+{
+    var authService = sp.GetRequiredService<IAuthService>();
+    var handler = new AuthMessageHandler(authService);
+    handler.InnerHandler = new HttpClientHandler();
+    var httpClient = new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+    return new CoursesApiClient(httpClient);
+});
+
+// Manual construction for CategoriesApiClient to ensure auth
+builder.Services.AddScoped<ICategoriesApiClient>(sp => 
+{
+    var authService = sp.GetRequiredService<IAuthService>();
+    var handler = new AuthMessageHandler(authService);
+    handler.InnerHandler = new HttpClientHandler();
+    var httpClient = new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+    return new CategoriesApiClient(httpClient);
+});
+
+// Manual construction for LessonsApiClient to ensure auth
+builder.Services.AddScoped<ILessonsApiClient>(sp => 
+{
+    var authService = sp.GetRequiredService<IAuthService>();
+    var handler = new AuthMessageHandler(authService);
+    handler.InnerHandler = new HttpClientHandler();
+    var httpClient = new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+    return new LessonsApiClient(httpClient);
+});
+
+// Manual construction for EnrollmentsApiClient to ensure auth
+builder.Services.AddScoped<IEnrollmentsApiClient>(sp => 
+{
+    var authService = sp.GetRequiredService<IAuthService>();
+    var handler = new AuthMessageHandler(authService);
+    handler.InnerHandler = new HttpClientHandler();
+    var httpClient = new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+    return new EnrollmentsApiClient(httpClient);
+});
+
+// Manual construction for QuizzesApiClient to ensure auth
+builder.Services.AddScoped<IQuizzesApiClient>(sp => 
+{
+    var authService = sp.GetRequiredService<IAuthService>();
+    var handler = new AuthMessageHandler(authService);
+    handler.InnerHandler = new HttpClientHandler();
+    var httpClient = new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+    return new QuizzesApiClient(httpClient);
+});
+
+// Manual construction for QuizQuestionsApiClient to ensure auth
+builder.Services.AddScoped<IQuizQuestionsApiClient>(sp => 
+{
+    var authService = sp.GetRequiredService<IAuthService>();
+    var handler = new AuthMessageHandler(authService);
+    handler.InnerHandler = new HttpClientHandler();
+    var httpClient = new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+    return new QuizQuestionsApiClient(httpClient);
+});
+
+// Manual construction for QuizResultsApiClient to ensure auth
+builder.Services.AddScoped<IQuizResultsApiClient>(sp => 
+{
+    var authService = sp.GetRequiredService<IAuthService>();
+    var handler = new AuthMessageHandler(authService);
+    handler.InnerHandler = new HttpClientHandler();
+    var httpClient = new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+    return new QuizResultsApiClient(httpClient);
+});
 builder.Services.AddScoped<IAuthApiClient>(sp =>
     new AuthApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient("ApiClient")));
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();

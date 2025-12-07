@@ -54,6 +54,13 @@
                     </InputSelect>
                 </div>
 
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success" style="background: #e8f5e9; color: #2e7d32; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                        ✅ @successMessage
+                    </div>
+                }
+                
                 @if (!string.IsNullOrEmpty(errorMessage))
                 {
                     <div class="alert alert-danger">@errorMessage</div>
@@ -86,7 +93,7 @@
     protected override async Task OnInitializedAsync()
     {
         var currentUser = await AuthService.GetCurrentUserAsync();
-        if (currentUser == null || currentUser.Role != "Instructor")
+        if (currentUser == null || (currentUser.Role != "Instructor" && currentUser.Role != "Admin"))
         {
             Navigation.NavigateTo("/");
             return;
@@ -96,17 +103,22 @@
         categories = await CategoriesClient.GetCategoriesAsync();
     }
 
+    private string? successMessage;
+    
     private async Task HandleSubmit()
     {
         isSubmitting = true;
         errorMessage = null;
+        successMessage = null;
 
         try
         {
             var result = await CoursesClient.CreateCourseAsync(course);
-            if (result.Success)
+            if (result.Success && result.Course != null)
             {
-                Navigation.NavigateTo("/instructor/courses");
+                successMessage = "Cours créé avec succès! Redirection...";
+                await Task.Delay(800);
+                Navigation.NavigateTo($"/instructor/manage/{result.Course.Id}");
             }
             else
             {

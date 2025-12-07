@@ -105,13 +105,13 @@ public class LessonsController : ControllerBase
             return NotFound($"Course {courseId} not found.");
 
         if (User.IsInRole("Admin"))
-            return new EmptyResult();
+            return null; // Admin can manage any course
 
         var userId = GetCurrentUserId();
         if (userId == null || course.InstructorId != userId.Value)
             return Forbid();
 
-        return null;
+        return null; // User is authorized
     }
 
     private int? GetCurrentUserId()

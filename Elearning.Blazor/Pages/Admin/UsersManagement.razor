@@ -150,8 +150,30 @@
     private async Task LoadUsers()
     {
         isLoading = true;
-        users = await UsersClient.GetUsersAsync();
-        isLoading = false;
+        errorMessage = null;
+        try
+        {
+            users = await UsersClient.GetUsersAsync();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            errorMessage = ex.Message;
+            users = new List<UserDto>();
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Erreur de connexion à l'API: {ex.Message}";
+            users = new List<UserDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Une erreur s'est produite lors du chargement des utilisateurs: {ex.Message}";
+            users = new List<UserDto>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void StartEditRole(UserDto user)

@@ -26,12 +26,34 @@ public class UsersApiClient : IUsersApiClient
     {
         try
         {
-            var result = await _httpClient.GetFromJsonAsync<List<UserDto>>("/api/users");
-            return result ?? new List<UserDto>();
+            var response = await _httpClient.GetAsync("/api/users");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<List<UserDto>>();
+                return result ?? new List<UserDto>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                throw new UnauthorizedAccessException("You are not authorized to access this resource. Please login as an admin.");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Failed to fetch users. Status: {response.StatusCode}, Error: {errorContent}");
+            }
         }
-        catch
+        catch (UnauthorizedAccessException)
         {
-            return new List<UserDto>();
+            throw; // Re-throw auth exceptions
+        }
+        catch (HttpRequestException)
+        {
+            throw; // Re-throw HTTP exceptions
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"An unexpected error occurred while fetching users: {ex.Message}", ex);
         }
     }
 
@@ -39,10 +61,16 @@ public class UsersApiClient : IUsersApiClient
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<UserDto>($"/api/users/{id}");
+            var response = await _httpClient.GetAsync($"/api/users/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<UserDto>();
+            }
+            return null;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error fetching user {id}: {ex.Message}");
             return null;
         }
     }
@@ -78,10 +106,16 @@ public class UsersApiClient : IUsersApiClient
         try
         {
             var response = await _httpClient.PutAsJsonAsync($"/api/users/{id}/role", new { Role = role });
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Failed to update user role: {response.StatusCode} - {error}");
+            }
             return response.IsSuccessStatusCode;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error updating user role: {ex.Message}");
             return false;
         }
     }
@@ -91,10 +125,16 @@ public class UsersApiClient : IUsersApiClient
         try
         {
             var response = await _httpClient.DeleteAsync($"/api/users/{id}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Failed to delete user: {response.StatusCode} - {error}");
+            }
             return response.IsSuccessStatusCode;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error deleting user: {ex.Message}");
             return false;
         }
     }

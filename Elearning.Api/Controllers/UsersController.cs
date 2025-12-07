@@ -21,6 +21,15 @@ public class UsersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
     {
+        // DEBUG LOGGING
+        Console.WriteLine($"[UsersController] User Authenticated: {User.Identity?.IsAuthenticated}");
+        Console.WriteLine($"[UsersController] Authentication Type: {User.Identity?.AuthenticationType}");
+        Console.WriteLine($"[UsersController] Name: {User.Identity?.Name}");
+        foreach (var claim in User.Claims)
+        {
+            Console.WriteLine($"[UsersController] Claim: Type={claim.Type}, Value={claim.Value}");
+        }
+
         var users = await _userService.GetAllAsync();
         return Ok(users);
     }

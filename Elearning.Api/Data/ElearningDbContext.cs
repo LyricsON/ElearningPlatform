@@ -23,6 +23,21 @@ public class ElearningDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Configure cascade delete behavior to avoid SQL Server multiple cascade paths
+        // Enrollment -> User should not cascade (conflict with Course -> User -> Enrollment)
+        modelBuilder.Entity<Enrollment>()
+            .HasOne(e => e.User)
+            .WithMany()
+            .HasForeignKey(e => e.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // QuizResult -> User should not cascade (conflict with Quiz -> Course -> User)
+        modelBuilder.Entity<QuizResult>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // prevent same student enrolling twice in same course
         modelBuilder.Entity<Enrollment>()
             .HasIndex(e => new { e.UserId, e.CourseId })
@@ -35,7 +50,7 @@ public class ElearningDbContext : DbContext
 
         // Check constraint for CorrectAnswer
         modelBuilder.Entity<QuizQuestion>()
-            .HasCheckConstraint("CK_QuizQuestions_CorrectAnswer",
-                "CorrectAnswer IN ('A','B','C','D')");
+            .ToTable(t => t.HasCheckConstraint("CK_QuizQuestions_CorrectAnswer",
+                "CorrectAnswer IN ('A','B','C','D')"));
     }
 }

@@ -49,6 +49,7 @@
                         @if (currentUser?.Role == "Admin")
                         {
                             <a @onclick="@(() => GoTo("/admin/users"))"><i class="bi bi-people"></i> Users</a>
+                            <a @onclick="@(() => GoTo("/admin/categories"))"><i class="bi bi-folder"></i> Categories</a>
                             <a @onclick="@(() => GoTo("/admin/courses"))"><i class="bi bi-mortarboard"></i> Courses</a>
                         }
                         <a @onclick="@(() => GoTo(ProfilePath))"><i class="bi bi-person-circle"></i> My profile</a>
@@ -66,21 +67,22 @@
     
     @if (isAuthenticated)
     {
-        @if (currentUser?.Role == "Student")
+        @if (currentUser?.Role == "Student" || currentUser?.Role == "Admin")
         {
             <NavLink class="nav-pill" href="/my-courses"><i class="bi bi-journal-text"></i> My courses</NavLink>
             <NavLink class="nav-pill" href="/my-results"><i class="bi bi-bar-chart"></i> Results</NavLink>
         }
         
-        @if (currentUser?.Role == "Instructor")
+        @if (currentUser?.Role == "Instructor" || currentUser?.Role == "Admin")
         {
-            <NavLink class="nav-pill" href="/instructor/courses"><i class="bi bi-journal-text"></i> My courses</NavLink>
+            <NavLink class="nav-pill" href="/instructor/courses"><i class="bi bi-journal-text"></i> My courses (Instructor)</NavLink>
             <NavLink class="nav-pill" href="/instructor/add-course"><i class="bi bi-plus-circle"></i> Create course</NavLink>
         }
         
         @if (currentUser?.Role == "Admin")
         {
             <NavLink class="nav-pill" href="/admin/users"><i class="bi bi-people"></i> Users</NavLink>
+            <NavLink class="nav-pill" href="/admin/categories"><i class="bi bi-folder"></i> Categories</NavLink>
             <NavLink class="nav-pill" href="/admin/courses"><i class="bi bi-mortarboard"></i> Manage courses</NavLink>
         }
     }

@@ -43,6 +43,7 @@
                         <h4>@(editingLesson == null ? "Nouvelle" : "Modifier") Leçon</h4>
                         <EditForm Model="@lessonForm" OnValidSubmit="SaveLesson">
                             <DataAnnotationsValidator />
+                            <ValidationSummary style="color: #f44336; background: #ffebee; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;" />
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>Titre</label>
@@ -61,6 +62,12 @@
                                 <label>Durée (minutes)</label>
                                 <InputNumber @bind-Value="lessonForm.DurationMinutes" class="input-control" />
                             </div>
+                            @if (!string.IsNullOrEmpty(lessonError))
+                            {
+                                <div class="alert alert-danger" style="background: #ffebee; color: #c62828; padding: 1rem; border-radius: 4px; margin-top: 1rem;">
+                                    ❌ @lessonError
+                                </div>
+                            }
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">Enregistrer</button>
                                 <button type="button" class="btn btn-outline" @onclick="CancelLessonForm">Annuler</button>
@@ -265,11 +272,12 @@
     private CreateLessonDto lessonForm = new();
     private CreateQuizDto quizForm = new();
     private CreateQuizQuestionDto questionForm = new();
+    private string? lessonError = null;
 
     protected override async Task OnInitializedAsync()
     {
         var currentUser = await AuthService.GetCurrentUserAsync();
-        if (currentUser == null || currentUser.Role != "Instructor")
+        if (currentUser == null || (currentUser.Role != "Instructor" && currentUser.Role != "Admin"))
         {
             Navigation.NavigateTo("/");
             return;
@@ -277,7 +285,14 @@
 
         course = await CoursesClient.GetCourseByIdAsync(CourseId);
         
-        if (course == null || course.InstructorId != currentUser.Id)
+        if (course == null)
+        {
+            Navigation.NavigateTo("/instructor/courses");
+            return;
+        }
+        
+        // Only check ownership for non-Admin users
+        if (currentUser.Role != "Admin" && course.InstructorId != currentUser.Id)
         {
             Navigation.NavigateTo("/instructor/courses");
             return;
@@ -299,6 +314,7 @@
         editingLesson = null;
         lessonForm = new CreateLessonDto { CourseId = CourseId, OrderNumber = lessons.Count + 1 };
         showLessonForm = true;
+        StateHasChanged();
     }
 
     private void ShowEditLessonForm(LessonDto lesson)
@@ -317,9 +333,17 @@
 
     private async Task SaveLesson()
     {
+        Console.WriteLine("SaveLesson started");
+        lessonError = null;
+        var result = (Success: false, Error: (string?)null);
+        
+        Console.WriteLine($"CourseId: {lessonForm.CourseId}, Title: '{lessonForm.Title}', Order: {lessonForm.OrderNumber}");
+        
         if (editingLesson == null)
         {
-            await LessonsClient.CreateLessonAsync(lessonForm);
+            Console.WriteLine("Calling CreateLessonAsync");
+            result = await LessonsClient.CreateLessonAsync(lessonForm);
+            Console.WriteLine($"CreateLesson result: Success={result.Success}, Error={result.Error}");
         }
         else
         {
@@ -330,22 +354,39 @@
                 DurationMinutes = lessonForm.DurationMinutes,
                 OrderNumber = lessonForm.OrderNumber
             };
-            await LessonsClient.UpdateLessonAsync(editingLesson.Id, updateDto);
+            var success = await LessonsClient.UpdateLessonAsync(editingLesson.Id, updateDto);
+            result = (success, success ? null : "Échec de la mise à jour");
         }
         
-        await LoadData();
-        CancelLessonForm();
+        if (result.Success)
+        {
+            Console.WriteLine("Success! Reloading data...");
+            await LoadData();
+            CancelLessonForm();
+            Console.WriteLine($"Lessons count after reload: {lessons.Count}");
+        }
+        else
+        {
+            lessonError = result.Error ?? "Échec de l'enregistrement de la leçon.";
+            Console.WriteLine($"Failed: {lessonError}");
+        }
     }
 
     private void CancelLessonForm()
     {
         showLessonForm = false;
         editingLesson = null;
+        lessonError = null;
     }
 
     private async Task DeleteLesson(int id)
     {
-        await LessonsClient.DeleteLessonAsync(id);
+        var result = await LessonsClient.DeleteLessonAsync(id);
+        if (!result.Success)
+        {
+            lessonError = result.Error ?? "Échec de la suppression de la leçon.";
+            return;
+        }
         await LoadData();
     }
 

@@ -7,7 +7,7 @@ public interface ICoursesApiClient
 {
     Task<List<CourseDto>> GetCoursesAsync(int? categoryId = null, int? instructorId = null);
     Task<CourseDetailsDto?> GetCourseByIdAsync(int id);
-    Task<(bool Success, string? Error)> CreateCourseAsync(CreateCourseDto dto);
+    Task<(bool Success, CourseDto? Course, string? Error)> CreateCourseAsync(CreateCourseDto dto);
     Task<bool> UpdateCourseAsync(int id, UpdateCourseDto dto);
     Task<bool> DeleteCourseAsync(int id);
 }
@@ -56,20 +56,23 @@ public class CoursesApiClient : ICoursesApiClient
         }
     }
 
-    public async Task<(bool Success, string? Error)> CreateCourseAsync(CreateCourseDto dto)
+    public async Task<(bool Success, CourseDto? Course, string? Error)> CreateCourseAsync(CreateCourseDto dto)
     {
         try
         {
             var response = await _httpClient.PostAsJsonAsync("/api/courses", dto);
             if (response.IsSuccessStatusCode)
-                return (true, null);
+            {
+                var createdCourse = await response.Content.ReadFromJsonAsync<CourseDto>();
+                return (true, createdCourse, null);
+            }
 
             var body = await response.Content.ReadAsStringAsync();
-            return (false, string.IsNullOrWhiteSpace(body) ? response.StatusCode.ToString() : body);
+            return (false, null, string.IsNullOrWhiteSpace(body) ? response.StatusCode.ToString() : body);
         }
         catch (Exception ex)
         {
-            return (false, ex.Message);
+            return (false, null, ex.Message);
         }
     }
 

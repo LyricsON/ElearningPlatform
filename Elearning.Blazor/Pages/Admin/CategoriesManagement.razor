@@ -1,0 +1,320 @@
+@page "/admin/categories"
+@using Elearning.Blazor.Models
+@using Elearning.Blazor.Services
+@inject ICategoriesApiClient CategoriesClient
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Gestion des catégories</PageTitle>
+
+<div class="container">
+    <div class="page-header">
+        <h1>Gestion des catégories</h1>
+        <button class="btn btn-primary" @onclick="ShowAddDialog">
+            <i class="bi bi-plus-circle"></i> Ajouter une catégorie
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-spinner">Chargement...</div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    else if (!categories.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-folder" style="font-size: 4rem; opacity: 0.3;"></i>
+            <h3>Aucune catégorie</h3>
+            <p>Commencez par créer votre première catégorie</p>
+            <button class="btn btn-primary" @onclick="ShowAddDialog">
+                <i class="bi bi-plus-circle"></i> Créer une catégorie
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var category in categories)
+                    {
+                        <tr>
+                            <td>@category.Id</td>
+                            <td>@category.Name</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline" @onclick="() => ShowEditDialog(category)">
+                                    <i class="bi bi-pencil"></i> Modifier
+                                </button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => ShowDeleteDialog(category)">
+                                    <i class="bi bi-trash"></i> Supprimer
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (showDialog)
+    {
+        <div class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;" @onclick="CloseDialog">
+            <div @onclick:stopPropagation="true" style="background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-width: 500px; width: 90%; max-height: 90vh; overflow: auto;">
+                <div style="padding: 1.5rem; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.25rem;">@dialogTitle</h3>
+                    <button @onclick="CloseDialog" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; padding: 0; width: 30px; height: 30px; line-height: 1;">&times;</button>
+                </div>
+                <div style="padding: 1.5rem;">
+                    @if (isDeleteMode)
+                    {
+                        <p>Êtes-vous sûr de vouloir supprimer la catégorie <strong>@selectedCategory?.Name</strong> ?</p>
+                        <p style="color: #ff9800;">⚠️ Cette action est irréversible.</p>
+                    }
+                    else
+                    {
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nom de la catégorie *</label>
+                            <input 
+                                type="text" 
+                                @bind="categoryName" 
+                                @bind:event="oninput"
+                                placeholder="Ex: Développement Web, Design, Marketing..." 
+                                required
+                                autofocus
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; box-sizing: border-box;" />
+                            @if (string.IsNullOrWhiteSpace(categoryName) && showValidation)
+                            {
+                                <small style="color: #f44336; font-size: 0.875rem; display: block; margin-top: 0.25rem;">Le nom est requis</small>
+                            }
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(dialogError))
+                    {
+                        <div style="padding: 1rem; background: #ffebee; color: #c62828; border-radius: 4px; margin-top: 1rem;">
+                            ❌ @dialogError
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div style="padding: 1rem; background: #e8f5e9; color: #2e7d32; border-radius: 4px; margin-top: 1rem;">
+                            ✅ @successMessage
+                        </div>
+                    }
+                </div>
+                <div style="padding: 1rem 1.5rem; border-top: 1px solid #e0e0e0; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button @onclick="CloseDialog" type="button" style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">Annuler</button>
+                    @if (isDeleteMode)
+                    {
+                        <button @onclick="DeleteCategory" disabled="@isSubmitting" type="button" style="padding: 0.5rem 1rem; border: none; background: #f44336; color: white; border-radius: 4px; cursor: pointer;">
+                            @if (isSubmitting)
+                            {
+                                <span>⏳ Suppression...</span>
+                            }
+                            else
+                            {
+                                <span>🗑️ Supprimer</span>
+                            }
+                        </button>
+                    }
+                    else
+                    {
+                        <button @onclick="SaveCategory" disabled="@isSubmitting" type="button" style="padding: 0.5rem 1rem; border: none; background: #2196F3; color: white; border-radius: 4px; cursor: pointer;">
+                            @if (isSubmitting)
+                            {
+                                <span>⏳ Enregistrement...</span>
+                            }
+                            else
+                            {
+                                <span>💾 Enregistrer</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CourseCategoryDto> categories = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private bool showDialog = false;
+    private bool isDeleteMode = false;
+    private bool isSubmitting = false;
+    private string dialogTitle = "";
+    private string? dialogError;
+    private string? successMessage;
+    private bool showValidation = false;
+    private CourseCategoryDto? selectedCategory;
+    private string categoryName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = await AuthService.GetCurrentUserAsync();
+        if (currentUser == null || currentUser.Role != "Admin")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            categories = await CategoriesClient.GetCategoriesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors du chargement des catégories: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowAddDialog()
+    {
+        dialogTitle = "Ajouter une catégorie";
+        isDeleteMode = false;
+        selectedCategory = null;
+        categoryName = "";
+        dialogError = null;
+        showDialog = true;
+    }
+
+    private void ShowEditDialog(CourseCategoryDto category)
+    {
+        dialogTitle = "Modifier la catégorie";
+        isDeleteMode = false;
+        selectedCategory = category;
+        categoryName = category.Name;
+        dialogError = null;
+        showDialog = true;
+    }
+
+    private void ShowDeleteDialog(CourseCategoryDto category)
+    {
+        dialogTitle = "Supprimer la catégorie";
+        isDeleteMode = true;
+        selectedCategory = category;
+        dialogError = null;
+        showDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        selectedCategory = null;
+        categoryName = "";
+        dialogError = null;
+        showValidation = false;
+    }
+
+    private async Task SaveCategory()
+    {
+        showValidation = true;
+        
+        if (string.IsNullOrWhiteSpace(categoryName))
+        {
+            dialogError = "Le nom de la catégorie est requis.";
+            return;
+        }
+
+        isSubmitting = true;
+        dialogError = null;
+        successMessage = null;
+
+        try
+        {
+            bool success;
+            if (selectedCategory == null)
+            {
+                // Create new category
+                var dto = new CreateCourseCategoryDto
+                {
+                    Name = categoryName
+                };
+                success = await CategoriesClient.CreateCategoryAsync(dto);
+            }
+            else
+            {
+                // Update existing category
+                var dto = new UpdateCourseCategoryDto
+                {
+                    Name = categoryName
+                };
+                success = await CategoriesClient.UpdateCategoryAsync(selectedCategory.Id, dto);
+            }
+
+            if (success)
+            {
+                successMessage = selectedCategory == null 
+                    ? "✅ Catégorie créée avec succès!" 
+                    : "✅ Catégorie mise à jour avec succès!";
+                
+                await Task.Delay(1000); // Show success message briefly
+                CloseDialog();
+                await LoadCategories();
+            }
+            else
+            {
+                dialogError = "Échec de l'enregistrement de la catégorie.";
+            }
+        }
+        catch (Exception ex)
+        {
+            dialogError = $"Erreur: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DeleteCategory()
+    {
+        if (selectedCategory == null) return;
+
+        isSubmitting = true;
+        dialogError = null;
+
+        try
+        {
+            var success = await CategoriesClient.DeleteCategoryAsync(selectedCategory.Id);
+            if (success)
+            {
+                CloseDialog();
+                await LoadCategories();
+            }
+            else
+            {
+                dialogError = "Échec de la suppression de la catégorie.";
+            }
+        }
+        catch (Exception ex)
+        {
+            dialogError = $"Erreur: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

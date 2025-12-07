@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Elearning.Api.Migrations
 {
     [DbContext(typeof(ElearningDbContext))]
-    [Migration("20251206190812_AddDifficultyLevelToCourses")]
-    partial class AddDifficultyLevelToCourses
+    [Migration("20251206231257_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -133,6 +133,9 @@ namespace Elearning.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AppUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
 
@@ -146,6 +149,8 @@ namespace Elearning.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
 
                     b.HasIndex("CourseId");
 
@@ -267,6 +272,9 @@ namespace Elearning.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AppUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("QuizId")
                         .HasColumnType("int");
 
@@ -280,6 +288,8 @@ namespace Elearning.Api.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
 
                     b.HasIndex("QuizId");
 
@@ -308,6 +318,10 @@ namespace Elearning.Api.Migrations
 
             modelBuilder.Entity("Elearning.Api.Models.Enrollment", b =>
                 {
+                    b.HasOne("Elearning.Api.Models.AppUser", null)
+                        .WithMany("Enrollments")
+                        .HasForeignKey("AppUserId");
+
                     b.HasOne("Elearning.Api.Models.Course", "Course")
                         .WithMany("Enrollments")
                         .HasForeignKey("CourseId")
@@ -315,9 +329,9 @@ namespace Elearning.Api.Migrations
                         .IsRequired();
 
                     b.HasOne("Elearning.Api.Models.AppUser", "User")
-                        .WithMany("Enrollments")
+                        .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Course");
@@ -360,6 +374,10 @@ namespace Elearning.Api.Migrations
 
             modelBuilder.Entity("Elearning.Api.Models.QuizResult", b =>
                 {
+                    b.HasOne("Elearning.Api.Models.AppUser", null)
+                        .WithMany("QuizResults")
+                        .HasForeignKey("AppUserId");
+
                     b.HasOne("Elearning.Api.Models.Quiz", "Quiz")
                         .WithMany("Results")
                         .HasForeignKey("QuizId")
@@ -367,9 +385,9 @@ namespace Elearning.Api.Migrations
                         .IsRequired();
 
                     b.HasOne("Elearning.Api.Models.AppUser", "User")
-                        .WithMany("QuizResults")
+                        .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Quiz");

@@ -7,9 +7,9 @@ public interface ILessonsApiClient
 {
     Task<List<LessonDto>> GetLessonsAsync(int? courseId = null);
     Task<LessonDto?> GetLessonByIdAsync(int id);
-    Task<bool> CreateLessonAsync(CreateLessonDto dto);
+    Task<(bool Success, string? Error)> CreateLessonAsync(CreateLessonDto dto);
     Task<bool> UpdateLessonAsync(int id, UpdateLessonDto dto);
-    Task<bool> DeleteLessonAsync(int id);
+    Task<(bool Success, string? Error)> DeleteLessonAsync(int id);
 }
 
 public class LessonsApiClient : ILessonsApiClient
@@ -52,16 +52,22 @@ public class LessonsApiClient : ILessonsApiClient
         }
     }
 
-    public async Task<bool> CreateLessonAsync(CreateLessonDto dto)
+    public async Task<(bool Success, string? Error)> CreateLessonAsync(CreateLessonDto dto)
     {
         try
         {
             var response = await _httpClient.PostAsJsonAsync("/api/lessons", dto);
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+                return (true, null);
+            
+            var errorBody = await response.Content.ReadAsStringAsync();
+            return (false, string.IsNullOrWhiteSpace(errorBody) 
+                ? $"Erreur {response.StatusCode}" 
+                : errorBody);
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, $"Exception: {ex.Message}");
         }
     }
 
@@ -78,16 +84,22 @@ public class LessonsApiClient : ILessonsApiClient
         }
     }
 
-    public async Task<bool> DeleteLessonAsync(int id)
+    public async Task<(bool Success, string? Error)> DeleteLessonAsync(int id)
     {
         try
         {
             var response = await _httpClient.DeleteAsync($"/api/lessons/{id}");
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+                return (true, null);
+            
+            var errorBody = await response.Content.ReadAsStringAsync();
+            return (false, string.IsNullOrWhiteSpace(errorBody) 
+                ? $"Erreur {response.StatusCode}" 
+                : errorBody);
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return (false, $"Exception: {ex.Message}");
         }
     }
 }
