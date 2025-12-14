@@ -74,3 +74,7 @@ Generated*/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Documents
+*.[Dd][Oo][Cc][Xx]
+*.[Pp][Dd][Ff]
