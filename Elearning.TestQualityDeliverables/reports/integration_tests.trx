@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="3d24e8b4-f3d3-463e-b09f-f6a55b4b7375" name="MSI@LYRICSON 2025-12-14 01:30:29" runUser="LYRICSON\MSI" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2025-12-14T01:30:29.0202736+01:00" queuing="2025-12-14T01:30:29.0202739+01:00" start="2025-12-14T01:30:26.4765770+01:00" finish="2025-12-14T01:30:29.0257353+01:00" />
+  <TestSettings name="default" id="e75f7848-12d4-4612-83a6-964d6cc1272f">
+    <Deployment runDeploymentRoot="MSI_LYRICSON_2025-12-14_01_30_29" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="8726bff8-a508-41c7-86e7-314832829c0c" testId="0ee6791d-82f9-a8e5-bf51-4f746d1f038f" testName="Elearning.Api.IntegrationTests.Api.CatalogEndpointsTests.GetCategories_IsPublic" computerName="LYRICSON" duration="00:00:00.0171364" startTime="2025-12-14T01:30:28.9244236+01:00" endTime="2025-12-14T01:30:28.9418718+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8726bff8-a508-41c7-86e7-314832829c0c" />
+    <UnitTestResult executionId="f5664be0-8273-4ae5-a3ce-c4ca56255705" testId="635316f3-dc6c-ab9a-0d87-86d99798864a" testName="Elearning.Api.IntegrationTests.Api.AuthEndpointsTests.RegisterAndLogin_ReturnsToken" computerName="LYRICSON" duration="00:00:00.2292940" startTime="2025-12-14T01:30:28.5532074+01:00" endTime="2025-12-14T01:30:28.7825915+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f5664be0-8273-4ae5-a3ce-c4ca56255705" />
+    <UnitTestResult executionId="96d866c4-1dda-4b04-b42c-dd5432dfa980" testId="05f632a7-152f-0f14-22a2-4792c299b262" testName="Elearning.Api.IntegrationTests.Api.AuthEndpointsTests.Register_WithInvalidRole_ReturnsBadRequest" computerName="LYRICSON" duration="00:00:01.3690961" startTime="2025-12-14T01:30:27.1799196+01:00" endTime="2025-12-14T01:30:28.5529811+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="96d866c4-1dda-4b04-b42c-dd5432dfa980" />
+    <UnitTestResult executionId="dd73c4ea-ba16-48ce-a050-f6f15db2b86f" testId="8b2b0ee1-e823-cbfd-1b2f-96f8ca8f273e" testName="Elearning.Api.IntegrationTests.Api.CatalogEndpointsTests.CreateCourse_AsInstructor_Works" computerName="LYRICSON" duration="00:00:01.7402852" startTime="2025-12-14T01:30:27.1786809+01:00" endTime="2025-12-14T01:30:28.9242328+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dd73c4ea-ba16-48ce-a050-f6f15db2b86f" />
+    <UnitTestResult executionId="402c759a-1205-4764-850d-1e78fc1af58f" testId="1fb83001-d4d9-be8b-da28-8a9975248b98" testName="Elearning.Api.IntegrationTests.Api.AuthorizationTests.ProtectedEnrollments_RequiresAuth" computerName="LYRICSON" duration="00:00:01.2560980" startTime="2025-12-14T01:30:27.1799870+01:00" endTime="2025-12-14T01:30:28.4438560+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="402c759a-1205-4764-850d-1e78fc1af58f" />
+    <UnitTestResult executionId="dcb34da2-e115-4e9e-834a-4e067ca5240c" testId="0df3ce39-734e-9ff1-ba3a-f1725dfbfe6a" testName="Elearning.Api.IntegrationTests.Api.AuthorizationTests.UsersEndpoint_RequiresAdmin" computerName="LYRICSON" duration="00:00:00.0082865" startTime="2025-12-14T01:30:28.4551629+01:00" endTime="2025-12-14T01:30:28.4552689+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dcb34da2-e115-4e9e-834a-4e067ca5240c" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Elearning.Api.IntegrationTests.Api.CatalogEndpointsTests.CreateCourse_AsInstructor_Works" storage="c:\users\msi\desktop\iit2glid\elearningplatform\elearning.dotnettests\elearning.api.integrationtests\bin\release\net8.0\elearning.api.integrationtests.dll" id="8b2b0ee1-e823-cbfd-1b2f-96f8ca8f273e">
+      <Execution id="dd73c4ea-ba16-48ce-a050-f6f15db2b86f" />
+      <TestMethod codeBase="C:\Users\MSI\Desktop\IIT2GLID\ElearningPlatform\Elearning.DotNetTests\Elearning.Api.IntegrationTests\bin\Release\net8.0\Elearning.Api.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Elearning.Api.IntegrationTests.Api.CatalogEndpointsTests" name="CreateCourse_AsInstructor_Works" />
+    </UnitTest>
+    <UnitTest name="Elearning.Api.IntegrationTests.Api.CatalogEndpointsTests.GetCategories_IsPublic" storage="c:\users\msi\desktop\iit2glid\elearningplatform\elearning.dotnettests\elearning.api.integrationtests\bin\release\net8.0\elearning.api.integrationtests.dll" id="0ee6791d-82f9-a8e5-bf51-4f746d1f038f">
+      <Execution id="8726bff8-a508-41c7-86e7-314832829c0c" />
+      <TestMethod codeBase="C:\Users\MSI\Desktop\IIT2GLID\ElearningPlatform\Elearning.DotNetTests\Elearning.Api.IntegrationTests\bin\Release\net8.0\Elearning.Api.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Elearning.Api.IntegrationTests.Api.CatalogEndpointsTests" name="GetCategories_IsPublic" />
+    </UnitTest>
+    <UnitTest name="Elearning.Api.IntegrationTests.Api.AuthorizationTests.UsersEndpoint_RequiresAdmin" storage="c:\users\msi\desktop\iit2glid\elearningplatform\elearning.dotnettests\elearning.api.integrationtests\bin\release\net8.0\elearning.api.integrationtests.dll" id="0df3ce39-734e-9ff1-ba3a-f1725dfbfe6a">
+      <Execution id="dcb34da2-e115-4e9e-834a-4e067ca5240c" />
+      <TestMethod codeBase="C:\Users\MSI\Desktop\IIT2GLID\ElearningPlatform\Elearning.DotNetTests\Elearning.Api.IntegrationTests\bin\Release\net8.0\Elearning.Api.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Elearning.Api.IntegrationTests.Api.AuthorizationTests" name="UsersEndpoint_RequiresAdmin" />
+    </UnitTest>
+    <UnitTest name="Elearning.Api.IntegrationTests.Api.AuthEndpointsTests.RegisterAndLogin_ReturnsToken" storage="c:\users\msi\desktop\iit2glid\elearningplatform\elearning.dotnettests\elearning.api.integrationtests\bin\release\net8.0\elearning.api.integrationtests.dll" id="635316f3-dc6c-ab9a-0d87-86d99798864a">
+      <Execution id="f5664be0-8273-4ae5-a3ce-c4ca56255705" />
+      <TestMethod codeBase="C:\Users\MSI\Desktop\IIT2GLID\ElearningPlatform\Elearning.DotNetTests\Elearning.Api.IntegrationTests\bin\Release\net8.0\Elearning.Api.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Elearning.Api.IntegrationTests.Api.AuthEndpointsTests" name="RegisterAndLogin_ReturnsToken" />
+    </UnitTest>
+    <UnitTest name="Elearning.Api.IntegrationTests.Api.AuthEndpointsTests.Register_WithInvalidRole_ReturnsBadRequest" storage="c:\users\msi\desktop\iit2glid\elearningplatform\elearning.dotnettests\elearning.api.integrationtests\bin\release\net8.0\elearning.api.integrationtests.dll" id="05f632a7-152f-0f14-22a2-4792c299b262">
+      <Execution id="96d866c4-1dda-4b04-b42c-dd5432dfa980" />
+      <TestMethod codeBase="C:\Users\MSI\Desktop\IIT2GLID\ElearningPlatform\Elearning.DotNetTests\Elearning.Api.IntegrationTests\bin\Release\net8.0\Elearning.Api.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Elearning.Api.IntegrationTests.Api.AuthEndpointsTests" name="Register_WithInvalidRole_ReturnsBadRequest" />
+    </UnitTest>
+    <UnitTest name="Elearning.Api.IntegrationTests.Api.AuthorizationTests.ProtectedEnrollments_RequiresAuth" storage="c:\users\msi\desktop\iit2glid\elearningplatform\elearning.dotnettests\elearning.api.integrationtests\bin\release\net8.0\elearning.api.integrationtests.dll" id="1fb83001-d4d9-be8b-da28-8a9975248b98">
+      <Execution id="402c759a-1205-4764-850d-1e78fc1af58f" />
+      <TestMethod codeBase="C:\Users\MSI\Desktop\IIT2GLID\ElearningPlatform\Elearning.DotNetTests\Elearning.Api.IntegrationTests\bin\Release\net8.0\Elearning.Api.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Elearning.Api.IntegrationTests.Api.AuthorizationTests" name="ProtectedEnrollments_RequiresAuth" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="0ee6791d-82f9-a8e5-bf51-4f746d1f038f" executionId="8726bff8-a508-41c7-86e7-314832829c0c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="635316f3-dc6c-ab9a-0d87-86d99798864a" executionId="f5664be0-8273-4ae5-a3ce-c4ca56255705" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="05f632a7-152f-0f14-22a2-4792c299b262" executionId="96d866c4-1dda-4b04-b42c-dd5432dfa980" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8b2b0ee1-e823-cbfd-1b2f-96f8ca8f273e" executionId="dd73c4ea-ba16-48ce-a050-f6f15db2b86f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1fb83001-d4d9-be8b-da28-8a9975248b98" executionId="402c759a-1205-4764-850d-1e78fc1af58f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0df3ce39-734e-9ff1-ba3a-f1725dfbfe6a" executionId="dcb34da2-e115-4e9e-834a-4e067ca5240c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Les résultats ne figurent pas dans une liste" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Tous les résultats chargés" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 8.0.22)&#xD;
+[xUnit.net 00:00:00.10]   Discovering: Elearning.Api.IntegrationTests&#xD;
+[xUnit.net 00:00:00.14]   Discovered:  Elearning.Api.IntegrationTests&#xD;
+[xUnit.net 00:00:00.16]   Starting:    Elearning.Api.IntegrationTests&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 0 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+info: Microsoft.EntityFrameworkCore.Update[30100]&#xD;
+      Saved 1 entities to in-memory store.&#xD;
+[xUnit.net 00:00:01.95]   Finished:    Elearning.Api.IntegrationTests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

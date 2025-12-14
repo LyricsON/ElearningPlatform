@@ -1,0 +1,15 @@
+{
+  // VS Code Python extension helpers for this test project.
+  // Open THIS folder (`Elearning.SeleniumTests`) in VS Code for best results.
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.cwd": "${workspaceFolder}",
+  "python.testing.pytestArgs": [
+    "-c",
+    "pytest.ini",
+    "tests"
+  ],
+  // Point VS Code to the local venv if you created it under this folder.
+  "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+}
+

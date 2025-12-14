@@ -20,6 +20,57 @@
 **/[Pp]ackages/*
 !.nuget/packages.config
 
-# Others
+# --------------------
+# Python / pytest
+# --------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# pytest cache
+.pytest_cache/
+
+# Coverage / reports (optional)
+.coverage
+coverage.xml
+htmlcov/
+
+# Artifacts (screenshots, page sources)
+artifacts/
+
+# VS Code (optional)
+.vscode/
+!.vscode/
+!.vscode/extensions.json
+Elearning.SeleniumTests/.vscode/
+!Elearning.SeleniumTests/.vscode/
+!Elearning.SeleniumTests/.vscode/settings.json
+
+# Build artifacts (optional)
+build/
+dist/
+*.egg-info/
+
+# Project-specific (Elearning.SeleniumTests)
+Elearning.SeleniumTests/.venv/
+
+# .NET test results (generated)
+TestResults/
+**/TestResults/
+
+# Logs (generated) - keep guideline deliverable logs tracked
 *.log
+!Elearning.TestQualityDeliverables/static/*.log
+!Elearning.TestQualityDeliverables/static/**/*.log
+
+# Other generated folders
 Generated*/
+
+# OS junk
+.DS_Store
+Thumbs.db
